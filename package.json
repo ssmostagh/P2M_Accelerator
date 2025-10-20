@@ -1,0 +1,33 @@
+{
+  "name": "ufp",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "concurrently \"npm:dev\" \"node server.js\"",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@google-cloud/secret-manager": "^6.1.1",
+    "@google/genai": "^1.25.0",
+    "concurrently": "^9.2.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.18.2",
+    "express-session": "^1.18.2",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.0.3",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.27",
+    "tailwindcss": "^3.3.3",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5"
+  }
+}
