@@ -1,11 +1,10 @@
-
 import React, { useState, useCallback } from 'react';
 import { VirtualTryOn } from './components/VirtualTryOn';
 import { FabricLibrary } from './components/FabricLibrary';
 import { EditStudio } from './components/EditStudio';
 import { FinalizePanel } from './components/FinalizePanel';
 import { HistoryPanel } from './components/HistoryPanel';
-import { editImage, generateInitialImage, generateEditVariations, generateVideoVariations } from './services/geminiService';
+import { generatePrompt, editImage, generateInitialImageVariations, generateEditVariations, generateVideoVariations } from './services/geminiService';
 import { DesignView, HistoryGroup, HistoryActionType, HistoryImage } from './types';
 
 const App: React.FC = () => {
@@ -34,6 +33,14 @@ const App: React.FC = () => {
   
   const [targetGarment, setTargetGarment] = useState<string>('');
 
+  const resetFinalization = () => {
+    setFinalFrontImage(null);
+    setBackImage(null);
+    setFinalBackImage(null);
+    setFinalVideoUrl(null);
+    setVideoVariations([]);
+  };
+
   const logActionToHistory = (type: HistoryActionType, images: string[], prompt?: string) => {
     const newGroup: HistoryGroup = {
       id: Date.now().toString(),
@@ -52,27 +59,27 @@ const App: React.FC = () => {
       setError('Please provide both a model image and a garment image.');
       return;
     }
-    setIsLoading(true);
+    setIsGeneratingVariations(true);
     setError(null);
     setCurrentImage(null);
     setDesignView(DesignView.FRONT);
-    setFinalFrontImage(null);
-    setBackImage(null);
-    setFinalBackImage(null);
     setHistory([]);
     setEditVariations([]);
-    setVideoVariations([]);
-    setFinalVideoUrl(null);
+    resetFinalization();
 
     try {
-      const generatedImage = await generateInitialImage(modelImage, garmentImage);
-      setCurrentImage(generatedImage);
-      logActionToHistory(HistoryActionType.INITIAL, [generatedImage]);
+      const prompt = await generatePrompt(garmentImage);
+      const variations = await generateInitialImageVariations(modelImage, garmentImage, prompt, 4);
+      setEditVariations(variations);
+      if (variations.length > 0) {
+        setCurrentImage(variations[0]);
+        logActionToHistory(HistoryActionType.INITIAL, variations);
+      }
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred during initial generation.');
     } finally {
-      setIsLoading(false);
+      setIsGeneratingVariations(false);
     }
   }, [modelImage, garmentImage]);
 
@@ -102,6 +109,7 @@ const App: React.FC = () => {
   const handleSelectVariation = (selectedImage: string) => {
     if (designView === DesignView.FRONT) {
       setCurrentImage(selectedImage);
+      resetFinalization();
     } else {
       setBackImage(selectedImage);
     }
@@ -127,6 +135,7 @@ const App: React.FC = () => {
       const editedImage = await editImage(imageToEdit, specificPrompt);
       if (designView === DesignView.FRONT) {
         setCurrentImage(editedImage);
+        resetFinalization();
       } else {
         setBackImage(editedImage);
       }
@@ -155,6 +164,7 @@ const App: React.FC = () => {
       if (variations.length > 0) {
         setBackImage(variations[0]);
         setEditVariations(variations);
+        setDesignView(DesignView.BACK); // Auto-switch to back view
         logActionToHistory(HistoryActionType.BACK_VIEW, variations);
       } else {
         setError("Could not generate back view variations.");
@@ -173,6 +183,7 @@ const App: React.FC = () => {
 
     if (designView === DesignView.FRONT) {
         setCurrentImage(image.imageUrl);
+        resetFinalization();
     } else {
         setBackImage(image.imageUrl);
     }
@@ -182,9 +193,6 @@ const App: React.FC = () => {
   const handleFinalize = () => {
     if (currentImage) {
       setFinalFrontImage(currentImage);
-      setDesignView(DesignView.BACK);
-      setCurrentImage(null); 
-      setEditVariations([]);
     } else {
       setError("No front design to finalize.");
     }
@@ -199,15 +207,15 @@ const App: React.FC = () => {
   };
 
   const handleSwitchToFront = () => {
-    if (finalFrontImage) {
-      setDesignView(DesignView.FRONT);
-      setCurrentImage(finalFrontImage);
-    }
+    setDesignView(DesignView.FRONT);
   };
 
   const handleSwitchToBack = () => {
-    setDesignView(DesignView.BACK);
-    setCurrentImage(null);
+    if (finalFrontImage) {
+      setDesignView(DesignView.BACK);
+    } else {
+      setError("Finalize the front design before switching to the back view.");
+    }
   };
 
   const handleDownloadImages = () => {
@@ -301,7 +309,7 @@ const App: React.FC = () => {
             garmentImage={garmentImage}
             setGarmentImage={setGarmentImage}
             onGenerate={handleInitialGenerate}
-            isLoading={isLoading && !currentImage && !finalFrontImage}
+            isLoading={isGeneratingVariations && !currentImage && !finalFrontImage}
           />
           <FabricLibrary 
             onSelectFabric={handleFabricSelect}

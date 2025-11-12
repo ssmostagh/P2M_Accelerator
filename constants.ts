@@ -1,4 +1,3 @@
-
 import { Fabric } from './types';
 
 export const FABRICS: Fabric[] = [
