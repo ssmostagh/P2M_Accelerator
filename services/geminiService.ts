@@ -120,12 +120,26 @@ export const generateEditVariations = async (baseImage: string, prompt: string, 
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to generate edit variations.');
+        const errorText = await response.text();
+        try {
+            const error = JSON.parse(errorText);
+            throw new Error(error.error || 'Failed to generate edit variations.');
+        } catch {
+            throw new Error(`Failed to generate edit variations: ${response.status} ${errorText || response.statusText}`);
+        }
     }
 
-    const result = await response.json();
-    return result;
+    const responseText = await response.text();
+    if (!responseText) {
+        throw new Error('Empty response from server');
+    }
+
+    try {
+        const result = JSON.parse(responseText);
+        return result;
+    } catch (e) {
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
+    }
 };
 
 const videoGenerationMessages = [

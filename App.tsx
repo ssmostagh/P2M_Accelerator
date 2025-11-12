@@ -164,6 +164,7 @@ const App: React.FC = () => {
       if (variations.length > 0) {
         setBackImage(variations[0]);
         setEditVariations(variations);
+        setDesignView(DesignView.BACK); // Auto-switch to back view
         logActionToHistory(HistoryActionType.BACK_VIEW, variations);
       } else {
         setError("Could not generate back view variations.");
