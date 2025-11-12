@@ -177,7 +177,8 @@ export const generateVideoVariations = async (frontImage: string, onStatusUpdate
         await new Promise(resolve => setTimeout(resolve, 5000)); // Poll every 5 seconds
         attempts++;
 
-        const statusResponse = await fetch(`/api/gemini/operation/${operationName}`);
+        const encodedOperationName = encodeURIComponent(operationName);
+        const statusResponse = await fetch(`/api/gemini/operation/${encodedOperationName}`);
         if (!statusResponse.ok) {
             console.error("Failed to fetch operation status:", statusResponse.statusText);
             continue; // Keep trying
