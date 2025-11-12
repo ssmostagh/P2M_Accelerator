@@ -355,6 +355,9 @@ app.post('/api/gemini', async (req, res) => {
 
 app.get('/api/gemini/operation/:name', async (req, res) => {
     const { name } = req.params;
+    const decodedName = decodeURIComponent(name);
+
+    console.log('📨 Received operation status request for:', decodedName);
 
     try {
         // Get access token for authentication
@@ -368,7 +371,7 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
         // Make direct HTTP request to check operation status
         // The name parameter is the full operation path returned by the API
         // We need to prepend /v1/ to construct the full URL
-        const url = `https://${location}-aiplatform.googleapis.com/v1/${name}`;
+        const url = `https://${location}-aiplatform.googleapis.com/v1/${decodedName}`;
 
         console.log('🔍 Checking operation status:', url);
 
