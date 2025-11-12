@@ -369,9 +369,15 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
         }
 
         // Make direct HTTP request to check operation status
-        // The name parameter is the full operation path returned by the API
-        // We need to prepend /v1/ to construct the full URL
-        const url = `https://${location}-aiplatform.googleapis.com/v1/${decodedName}`;
+        // For Veo operations, extract just the operation ID and use the operations endpoint
+        // Operation name format: projects/.../publishers/google/models/veo-3.1-generate-preview/operations/{id}
+        const operationIdMatch = decodedName.match(/operations\/([^\/]+)$/);
+        if (!operationIdMatch) {
+            throw new Error(`Invalid operation name format: ${decodedName}`);
+        }
+        const operationId = operationIdMatch[1];
+
+        const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/operations/${operationId}`;
 
         console.log('🔍 Checking operation status:', url);
 
