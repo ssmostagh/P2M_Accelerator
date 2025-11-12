@@ -60,7 +60,7 @@ export const FabricLibrary: React.FC<FabricLibraryProps> = ({ onSelectFabric, is
         <div
           ref={scrollContainerRef}
           className="grid grid-rows-3 grid-flow-col gap-2 overflow-x-auto pb-2"
-          style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
         >
           {FABRICS.map((fabric) => (
             <button

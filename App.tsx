@@ -4,7 +4,7 @@ import { FabricLibrary } from './components/FabricLibrary';
 import { EditStudio } from './components/EditStudio';
 import { FinalizePanel } from './components/FinalizePanel';
 import { HistoryPanel } from './components/HistoryPanel';
-import { generatePrompt, editImage, generateInitialImage, generateInitialImageVariations, generateEditVariations, generateVideoVariations } from './services/geminiService';
+import { generatePrompt, editImage, generateInitialImageVariations, generateEditVariations, generateVideoVariations } from './services/geminiService';
 import { DesignView, HistoryGroup, HistoryActionType, HistoryImage } from './types';
 
 const App: React.FC = () => {
@@ -330,9 +330,7 @@ const App: React.FC = () => {
             editVariations={editVariations}
             onSelectVariation={handleSelectVariation}
             view={designView}
-            isFrontFinalized={!!finalFrontImage}
-            onGenerateBack={handleGenerateBack}
-            isBackGenerated={!!backImage}
+            hasFinalizedFront={!!finalFrontImage}
           />
         </div>
 

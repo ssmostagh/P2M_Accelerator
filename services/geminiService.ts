@@ -139,7 +139,6 @@ const videoGenerationMessages = [
 
 export const generateVideoVariations = async (frontImage: string, onStatusUpdate: (status: string) => void, count: number = 3): Promise<string[]> => {
     console.log("Starting video generation request...");
-    const { inlineData } = dataUrlToGenerativePart(frontImage);
 
     const initialResponse = await fetch('/api/gemini', {
         method: 'POST',
@@ -199,7 +198,7 @@ export const generateVideoVariations = async (frontImage: string, onStatusUpdate
         throw new Error("Video generation finished, but no videos were found.");
     }
 
-    const videoUrlPromises = generatedVideos.map(async (video) => {
+    const videoUrlPromises = generatedVideos.map(async (video: any) => {
         const downloadLink = video?.video?.uri;
         if (!downloadLink) {
             throw new Error("A video was generated, but its download link is missing.");
