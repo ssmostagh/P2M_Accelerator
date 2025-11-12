@@ -48,6 +48,7 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
   isLoading,
 }) => {
   const [showVideoModal, setShowVideoModal] = React.useState(false);
+  const [previewVideoUrl, setPreviewVideoUrl] = React.useState<string | null>(null);
 
   const handlePlayVideo = () => {
     if (finalVideoUrl) {
@@ -155,18 +156,22 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
 
               {videoVariations.length > 0 && (
                 <div className="bg-gray-700 p-3 rounded-lg">
-                  <h4 className="text-md font-semibold text-gray-300 mb-2">Select Video Variation</h4>
-                  <div className="grid grid-cols-3 gap-2">
+                  <h4 className="text-md font-semibold text-gray-300 mb-2">Preview & Select Video</h4>
+                  <div className="grid grid-cols-2 gap-2">
                     {videoVariations.map((videoUrl, index) => (
-                      <video
-                        key={index}
-                        src={videoUrl}
-                        className="w-full h-auto object-cover rounded-md cursor-pointer hover:ring-4 hover:ring-purple-500 transition-all"
-                        onClick={() => onSelectVideoVariation(videoUrl)}
-                        muted
-                        autoPlay
-                        loop
-                      />
+                      <div key={index} className="relative group">
+                        <video
+                          src={videoUrl}
+                          className="w-full h-auto object-cover rounded-md cursor-pointer hover:ring-4 hover:ring-purple-500 transition-all"
+                          onClick={() => setPreviewVideoUrl(videoUrl)}
+                          muted
+                          autoPlay
+                          loop
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-md">
+                          <span className="text-white font-semibold">Click to Preview</span>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -193,7 +198,19 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
         </div>
       </div>
       {showVideoModal && finalVideoUrl && (
-        <VideoPlayerModal videoUrl={finalVideoUrl} onClose={() => setShowVideoModal(false)} />
+        <VideoPlayerModal
+          videoUrl={finalVideoUrl}
+          onClose={() => setShowVideoModal(false)}
+        />
+      )}
+
+      {previewVideoUrl && (
+        <VideoPlayerModal
+          videoUrl={previewVideoUrl}
+          onClose={() => setPreviewVideoUrl(null)}
+          onSelect={() => onSelectVideoVariation(previewVideoUrl)}
+          showSelectButton={true}
+        />
       )}
     </div>
   );
