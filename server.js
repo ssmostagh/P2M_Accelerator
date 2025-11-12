@@ -39,8 +39,10 @@ const ai = new GoogleGenAI({
 
 // Initialize Google Cloud Storage
 const storage = new Storage({ project: project });
-const bucketName = 'p2m-accelerator-ufp';
-const videoFolder = 'video_generation';
+const bucketName = process.env.GCS_BUCKET_NAME || 'p2m-accelerator-ufp';
+const videoFolder = process.env.GCS_VIDEO_FOLDER || 'video_generation';
+
+console.log(`Using GCS bucket: gs://${bucketName}/${videoFolder}/`);
 
 // Initialize Google Auth for getting access tokens
 const auth = new GoogleAuth({
@@ -279,8 +281,9 @@ const generateVideoVariations = async (frontImage, count = 3) => {
             }
         ],
         parameters: {
-            sampleCount: 1,
-            durationSeconds: 4,
+            storageUri: `gs://${bucketName}/${videoFolder}/`,
+            sampleCount: 4,
+            durationSeconds: 6,
             aspectRatio: "16:9",
             resolution: "720p",
             generateAudio: true
@@ -369,23 +372,22 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
         }
 
         // Make direct HTTP request to check operation status
-        // For Veo operations, extract just the operation ID and use the operations endpoint
+        // For Veo operations, use fetchPredictOperation endpoint with POST
         // Operation name format: projects/.../publishers/google/models/veo-3.1-generate-preview/operations/{id}
-        const operationIdMatch = decodedName.match(/operations\/([^\/]+)$/);
-        if (!operationIdMatch) {
-            throw new Error(`Invalid operation name format: ${decodedName}`);
-        }
-        const operationId = operationIdMatch[1];
+        const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google/models/${videoModel}:fetchPredictOperation`;
 
-        const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/operations/${operationId}`;
-
-        console.log('🔍 Checking operation status:', url);
+        console.log('🔍 Checking operation status with fetchPredictOperation');
+        console.log('📝 Operation name:', decodedName);
 
         const response = await fetch(url, {
-            method: 'GET',
+            method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${accessToken.token}`
-            }
+            },
+            body: JSON.stringify({
+                operationName: decodedName
+            })
         });
 
         if (!response.ok) {
@@ -403,50 +405,53 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
             console.log('✅ Operation completed, checking for videos...');
 
             // Try to find videos in different possible response structures
-            const predictions = operation.response?.predictions ||
-                               operation.response?.generatedVideos ||
-                               [];
+            // Veo response format: operation.response.videos[{gcsUri, mimeType}]
+            const videos = operation.response?.videos ||
+                          operation.response?.predictions ||
+                          operation.response?.generatedVideos ||
+                          [];
 
-            if (predictions.length > 0) {
-                console.log(`📹 Found ${predictions.length} video(s), uploading to GCS bucket: gs://${bucketName}/${videoFolder}/`);
+            if (videos.length > 0) {
+                console.log(`📹 Found ${videos.length} video(s) already in GCS bucket: gs://${bucketName}/${videoFolder}/`);
 
                 try {
                     const gcsUrls = await Promise.all(
-                        predictions.map(async (prediction, index) => {
+                        videos.map(async (video, index) => {
                             // Try different possible fields for video URI
-                            const downloadLink = prediction?.videoGcsUri ||
-                                               prediction?.uri ||
-                                               prediction?.video?.uri ||
-                                               prediction?.video?.gcsUri;
+                            // Veo format: video.gcsUri (points to our bucket since we set storageUri)
+                            const gcsUri = video?.gcsUri ||
+                                          video?.videoGcsUri ||
+                                          video?.uri ||
+                                          video?.video?.uri ||
+                                          video?.video?.gcsUri;
 
-                            if (!downloadLink) {
-                                console.error('❌ No video URI found in prediction:', JSON.stringify(prediction, null, 2));
-                                throw new Error(`Video download link is missing for prediction ${index}`);
+                            if (!gcsUri) {
+                                console.error('❌ No video URI found in video object:', JSON.stringify(video, null, 2));
+                                console.error('📋 Full videos array:', JSON.stringify(videos, null, 2));
+                                console.error('📋 All response keys:', Object.keys(operation.response || {}));
+                                throw new Error(`Video GCS URI missing for video ${index}`);
                             }
 
-                            console.log(`📥 Downloading video ${index + 1}/${predictions.length} from:`, downloadLink);
+                            console.log(`✅ Video ${index + 1}/${videos.length} saved at: ${gcsUri}`);
 
-                            // Download the video from GCS URI
-                            const videoResponse = await fetch(downloadLink);
-                            if (!videoResponse.ok) {
-                                throw new Error(`Failed to download video ${index + 1}: ${videoResponse.statusText}`);
-                            }
+                            // Extract filename from GCS URI: gs://bucket/folder/filename.mp4
+                            const filename = gcsUri.split('/').pop();
 
-                            const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
-                            console.log(`📦 Downloaded video ${index + 1}, size: ${videoBuffer.length} bytes`);
+                            // Generate signed URL (works in Cloud Run with service account)
+                            const bucket = storage.bucket(bucketName);
+                            const file = bucket.file(`${videoFolder}/${filename}`);
 
-                            // Generate a unique filename with timestamp
-                            const timestamp = Date.now();
-                            const filename = `video_${timestamp}_${index}.mp4`;
-                            const gcsPath = `gs://${bucketName}/${videoFolder}/${filename}`;
+                            const [signedUrl] = await file.getSignedUrl({
+                                version: 'v4',
+                                action: 'read',
+                                expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+                            });
 
-                            // Upload to our GCS bucket with signed URL
-                            const gcsUrl = await uploadVideoToGCS(videoBuffer, filename);
-                            console.log(`✅ Uploaded video ${index + 1} to GCS:`);
-                            console.log(`   Path: ${gcsPath}`);
-                            console.log(`   Signed URL: ${gcsUrl.substring(0, 100)}...`);
+                            console.log(`🔗 Generated signed URL for video ${index + 1}`);
+                            console.log(`   GCS Path: ${gcsUri}`);
+                            console.log(`   Signed URL: ${signedUrl.substring(0, 100)}...`);
 
-                            return gcsUrl;
+                            return signedUrl;
                         })
                     );
 
