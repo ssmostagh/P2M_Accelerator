@@ -266,8 +266,8 @@ const generateVideoVariations = async (frontImage, count = 3) => {
         throw new Error('Failed to get access token from Google Auth');
     }
 
-    // Prepare the request body matching the curl command structure
-    // Note: parameters are at the same level as prompt and image, not nested
+    // Prepare the request body with correct Vertex AI structure
+    // According to Vertex AI docs: instances array + separate parameters object
     const requestBody = {
         instances: [
             {
@@ -275,13 +275,16 @@ const generateVideoVariations = async (frontImage, count = 3) => {
                 image: {
                     bytesBase64Encoded: inlineData.data,
                     mimeType: inlineData.mimeType
-                },
-                addWatermark: true,
-                includeRaiReason: true,
-                generateAudio: true,
-                resolution: "720p"
+                }
             }
-        ]
+        ],
+        parameters: {
+            sampleCount: 1,
+            durationSeconds: 4,
+            aspectRatio: "16:9",
+            resolution: "720p",
+            generateAudio: true
+        }
     };
 
     // Make direct HTTP request to Vertex AI API
@@ -290,6 +293,7 @@ const generateVideoVariations = async (frontImage, count = 3) => {
 
     console.log('📤 Sending request to Vertex AI API...');
     console.log('URL:', url);
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
     const response = await fetch(url, {
         method: 'POST',
@@ -383,55 +387,87 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
 
         const operation = await response.json();
         console.log('📊 Operation status:', operation.done ? 'DONE' : 'IN PROGRESS');
+        console.log('📋 Full operation response:', JSON.stringify(operation, null, 2));
 
-        // If operation is done and has videos, upload them to GCS
-        if (operation.done && operation.response?.predictions) {
-            console.log('📹 Uploading videos to GCS bucket:', bucketName);
+        // If operation is done, try to extract and save videos
+        if (operation.done) {
+            console.log('✅ Operation completed, checking for videos...');
 
-            // The Veo API returns predictions array, extract video URIs
-            const predictions = operation.response.predictions;
+            // Try to find videos in different possible response structures
+            const predictions = operation.response?.predictions ||
+                               operation.response?.generatedVideos ||
+                               [];
 
-            const gcsUrls = await Promise.all(
-                predictions.map(async (prediction, index) => {
-                    const downloadLink = prediction?.videoGcsUri || prediction?.uri;
-                    if (!downloadLink) {
-                        console.error('❌ No video URI found in prediction:', prediction);
-                        throw new Error('Video download link is missing');
-                    }
+            if (predictions.length > 0) {
+                console.log(`📹 Found ${predictions.length} video(s), uploading to GCS bucket: gs://${bucketName}/${videoFolder}/`);
 
-                    console.log(`📥 Downloading video ${index + 1} from:`, downloadLink);
+                try {
+                    const gcsUrls = await Promise.all(
+                        predictions.map(async (prediction, index) => {
+                            // Try different possible fields for video URI
+                            const downloadLink = prediction?.videoGcsUri ||
+                                               prediction?.uri ||
+                                               prediction?.video?.uri ||
+                                               prediction?.video?.gcsUri;
 
-                    // Download the video from GCS URI
-                    const response = await fetch(downloadLink);
-                    if (!response.ok) {
-                        throw new Error(`Failed to download video: ${response.statusText}`);
-                    }
+                            if (!downloadLink) {
+                                console.error('❌ No video URI found in prediction:', JSON.stringify(prediction, null, 2));
+                                throw new Error(`Video download link is missing for prediction ${index}`);
+                            }
 
-                    const videoBuffer = Buffer.from(await response.arrayBuffer());
+                            console.log(`📥 Downloading video ${index + 1}/${predictions.length} from:`, downloadLink);
 
-                    // Generate a unique filename
-                    const timestamp = Date.now();
-                    const filename = `video_${timestamp}_${index}.mp4`;
+                            // Download the video from GCS URI
+                            const videoResponse = await fetch(downloadLink);
+                            if (!videoResponse.ok) {
+                                throw new Error(`Failed to download video ${index + 1}: ${videoResponse.statusText}`);
+                            }
 
-                    // Upload to our GCS bucket with signed URL
-                    const gcsUrl = await uploadVideoToGCS(videoBuffer, filename);
-                    console.log(`✅ Uploaded video ${index + 1} to GCS:`, gcsUrl);
+                            const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+                            console.log(`📦 Downloaded video ${index + 1}, size: ${videoBuffer.length} bytes`);
 
-                    return gcsUrl;
-                })
-            );
+                            // Generate a unique filename with timestamp
+                            const timestamp = Date.now();
+                            const filename = `video_${timestamp}_${index}.mp4`;
+                            const gcsPath = `gs://${bucketName}/${videoFolder}/${filename}`;
 
-            // Return operation with GCS URLs in the format expected by frontend
-            const modifiedOperation = {
-                ...operation,
-                response: {
-                    ...operation.response,
-                    generatedVideos: gcsUrls.map(url => ({ video: { uri: url } }))
+                            // Upload to our GCS bucket with signed URL
+                            const gcsUrl = await uploadVideoToGCS(videoBuffer, filename);
+                            console.log(`✅ Uploaded video ${index + 1} to GCS:`);
+                            console.log(`   Path: ${gcsPath}`);
+                            console.log(`   Signed URL: ${gcsUrl.substring(0, 100)}...`);
+
+                            return gcsUrl;
+                        })
+                    );
+
+                    console.log(`🎉 Successfully saved all ${gcsUrls.length} video(s) to GCS bucket!`);
+
+                    // Return operation with GCS URLs in the format expected by frontend
+                    const modifiedOperation = {
+                        ...operation,
+                        response: {
+                            ...operation.response,
+                            generatedVideos: gcsUrls.map(url => ({ video: { uri: url } }))
+                        }
+                    };
+
+                    res.json(modifiedOperation);
+                } catch (saveError) {
+                    console.error('❌ Error saving videos to GCS:', saveError);
+                    // Still return the operation even if save fails, so frontend knows it completed
+                    res.json({
+                        ...operation,
+                        saveError: saveError.message
+                    });
                 }
-            };
-
-            res.json(modifiedOperation);
+            } else {
+                console.log('⚠️  Operation done but no videos found in response');
+                console.log('📋 Response structure:', JSON.stringify(operation.response, null, 2));
+                res.json(operation);
+            }
         } else {
+            // Operation still in progress
             res.json(operation);
         }
     } catch (error) {
@@ -440,6 +476,45 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
     }
 });
 
+// Endpoint to list all videos in GCS bucket
+app.get('/api/videos/list', async (req, res) => {
+    try {
+        const bucket = storage.bucket(bucketName);
+        const [files] = await bucket.getFiles({
+            prefix: videoFolder + '/',
+        });
+
+        const videos = await Promise.all(
+            files
+                .filter(file => file.name.endsWith('.mp4'))
+                .map(async (file) => {
+                    const [signedUrl] = await file.getSignedUrl({
+                        version: 'v4',
+                        action: 'read',
+                        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+                    });
+
+                    return {
+                        name: file.name,
+                        size: file.metadata.size,
+                        created: file.metadata.timeCreated,
+                        url: signedUrl,
+                        gcsPath: `gs://${bucketName}/${file.name}`
+                    };
+                })
+        );
+
+        console.log(`📋 Listed ${videos.length} video(s) from GCS bucket: gs://${bucketName}/${videoFolder}/`);
+        res.json({
+            bucket: `gs://${bucketName}/${videoFolder}/`,
+            count: videos.length,
+            videos: videos
+        });
+    } catch (error) {
+        console.error('Error listing videos from GCS:', error);
+        res.status(500).json({ error: 'Failed to list videos from GCS bucket.' });
+    }
+});
 
 app.use(express.static('dist'));
 
