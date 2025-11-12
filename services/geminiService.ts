@@ -1,14 +1,8 @@
 
-import { GoogleGenAI, Modality, GenerateContentResponse } from '@google/genai';
 
 // When running on Google Cloud, the project and credentials will be
 // inferred from the environment.
-const ai = new GoogleGenAI({ vertexai: true });
 
-const imageModel = 'gemini-2.5-flash-image';
-const videoModel = 'veo-2.0-generate-001';
-
-// Helper to convert File object to a base64 string with MIME type
 const fileToGenerativePart = async (file: File) => {
   const base64EncodedDataPromise = new Promise<string>((resolve) => {
     const reader = new FileReader();
@@ -18,6 +12,26 @@ const fileToGenerativePart = async (file: File) => {
   return {
     inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
   };
+};
+
+export const generatePrompt = async (garmentImage: File): Promise<string> => {
+  const garmentImagePart = await fileToGenerativePart(garmentImage);
+
+  const response = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ func: 'generatePrompt', args: [garmentImagePart] }),
+  });
+
+  if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to generate prompt.');
+  }
+
+  const result = await response.json();
+  return result;
 };
 
 // Helper to convert a base64 data URL to a generative part
@@ -30,54 +44,88 @@ const dataUrlToGenerativePart = (dataUrl: string) => {
 };
 
 
-const processApiResponse = (response: GenerateContentResponse): string => {
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-            const { mimeType, data } = part.inlineData;
-            return `data:${mimeType};base64,${data}`;
-        }
-    }
-    throw new Error('No image found in the API response.');
-};
 
-export const generateInitialImage = async (modelImage: File, garmentImage: File): Promise<string> => {
+export const generateInitialImage = async (modelImage: File, garmentImage: File, prompt: string): Promise<string> => {
   const modelImagePart = await fileToGenerativePart(modelImage);
   const garmentImagePart = await fileToGenerativePart(garmentImage);
-  const textPart = { text: `Using the person from the first image and the garment from the second image, create a photorealistic virtual try-on. The garment should be placed on the person, fitting them naturally. Maintain the style of the garment and the person's pose and background from the first image.` };
+  const textPart = { text: prompt };
 
-  const response = await ai.models.generateContent({
-    model: imageModel,
-    contents: { role: 'user', parts: [modelImagePart, garmentImagePart, textPart] },
-    config: {
-      responseModalities: [Modality.IMAGE, Modality.TEXT],
+  const response = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ func: 'generateInitialImage', args: [modelImagePart, garmentImagePart, textPart] }),
   });
 
-  return processApiResponse(response);
+  if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to generate initial image.');
+  }
+
+  const result = await response.json();
+  return result;
+};
+
+export const generateInitialImageVariations = async (modelImage: File, garmentImage: File, prompt: string, count: number = 4): Promise<string[]> => {
+  const modelImagePart = await fileToGenerativePart(modelImage);
+  const garmentImagePart = await fileToGenerativePart(garmentImage);
+  const textPart = { text: prompt };
+
+  const response = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ func: 'generateInitialImageVariations', args: [modelImagePart, garmentImagePart, textPart, count] }),
+  });
+
+  if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to generate initial image variations.');
+  }
+
+  const result = await response.json();
+  return result;
 };
 
 export const editImage = async (baseImage: string, prompt: string): Promise<string> => {
   const imagePart = dataUrlToGenerativePart(baseImage);
   const textPart = { text: prompt };
 
-  const response = await ai.models.generateContent({
-    model: imageModel,
-    contents: { role: 'user', parts: [imagePart, textPart] },
-    config: {
-      responseModalities: [Modality.IMAGE, Modality.TEXT],
+  const response = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ func: 'editImage', args: [imagePart, textPart] }),
   });
 
-  return processApiResponse(response);
+  if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to edit image.');
+  }
+
+  const result = await response.json();
+  return result;
 };
 
 export const generateEditVariations = async (baseImage: string, prompt: string, count: number = 3): Promise<string[]> => {
-    const editPromises: Promise<string>[] = [];
-    for (let i = 0; i < count; i++) {
-        editPromises.push(editImage(baseImage, prompt));
+    const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ func: 'generateEditVariations', args: [baseImage, prompt, count] }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate edit variations.');
     }
-    const results = await Promise.all(editPromises);
-    return results;
+
+    const result = await response.json();
+    return result;
 };
 
 const videoGenerationMessages = [
@@ -90,20 +138,25 @@ const videoGenerationMessages = [
 ];
 
 export const generateVideoVariations = async (frontImage: string, onStatusUpdate: (status: string) => void, count: number = 3): Promise<string[]> => {
+    console.log("Starting video generation request...");
     const { inlineData } = dataUrlToGenerativePart(frontImage);
 
-    let operation = await ai.models.generateVideos({
-        model: videoModel,
-        prompt: "Animate the person in the image turning around smoothly, as if on a catwalk, to show the back of their garment. The movement should be natural and the background should remain consistent.",
-        image: {
-            imageBytes: inlineData.data,
-            mimeType: inlineData.mimeType,
+    const initialResponse = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
         },
-        config: {
-            numberOfVideos: count,
-            aspectRatio: '9:16',
-        },
+        body: JSON.stringify({ func: 'generateVideoVariations', args: [frontImage, count] }),
     });
+
+    if (!initialResponse.ok) {
+        const error = await initialResponse.json();
+        console.error("Initial video generation request failed:", error);
+        throw new Error(error.error || 'Failed to initiate video generation.');
+    }
+
+    const { name: operationName } = await initialResponse.json();
+    console.log("Video generation operation started:", operationName);
 
     let messageIndex = 0;
     onStatusUpdate(videoGenerationMessages[messageIndex]);
@@ -112,12 +165,33 @@ export const generateVideoVariations = async (frontImage: string, onStatusUpdate
         onStatusUpdate(videoGenerationMessages[messageIndex]);
     }, 8000);
 
-    while (!operation.done) {
-        await new Promise(resolve => setTimeout(resolve, 10000)); // Poll every 10 seconds
-        operation = await ai.operations.getVideosOperation({ operation: operation });
+    let operation;
+    let attempts = 0;
+    const maxAttempts = 120; // 120 attempts * 5 seconds = 10 minutes timeout
+
+    while (true) {
+        if (attempts >= maxAttempts) {
+            clearInterval(interval);
+            throw new Error("Video generation timed out.");
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Poll every 5 seconds
+        attempts++;
+
+        const statusResponse = await fetch(`/api/gemini/operation/${operationName}`);
+        if (!statusResponse.ok) {
+            console.error("Failed to fetch operation status:", statusResponse.statusText);
+            continue; // Keep trying
+        }
+        operation = await statusResponse.json();
+        console.log("Operation status:", operation);
+
+        if (operation.done) {
+            clearInterval(interval);
+            break;
+        }
     }
 
-    clearInterval(interval);
     onStatusUpdate("Video processing complete!");
 
     const generatedVideos = operation.response?.generatedVideos;
@@ -142,3 +216,4 @@ export const generateVideoVariations = async (frontImage: string, onStatusUpdate
 
     return Promise.all(videoUrlPromises);
 };
+

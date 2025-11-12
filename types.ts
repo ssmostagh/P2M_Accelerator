@@ -1,13 +1,19 @@
+export interface Fabric {
+  id: number;
+  name: string;
+  imageUrl: string;
+  prompt: string;
+}
 
 export enum DesignView {
-  FRONT = 'front',
-  BACK = 'back',
+  FRONT = 'FRONT',
+  BACK = 'BACK',
 }
 
 export enum HistoryActionType {
   INITIAL = 'Initial Generation',
+  EDIT = 'Image Edit',
   FABRIC = 'Fabric Change',
-  EDIT = 'Freeform Edit',
   BACK_VIEW = 'Back View Generation',
 }
 
@@ -17,15 +23,8 @@ export interface HistoryImage {
 }
 
 export interface HistoryGroup {
-  id:string;
+  id: string;
   type: HistoryActionType;
   prompt?: string;
   images: HistoryImage[];
-}
-
-export interface Fabric {
-  id: number;
-  name: string;
-  imageUrl: string;
-  prompt: string;
 }
