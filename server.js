@@ -434,24 +434,20 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
 
                             console.log(`✅ Video ${index + 1}/${videos.length} saved at: ${gcsUri}`);
 
-                            // Extract filename from GCS URI: gs://bucket/folder/filename.mp4
-                            const filename = gcsUri.split('/').pop();
+                            // Extract folder and filename from GCS URI: gs://bucket/folder/subfolder/filename.mp4
+                            // GCS URI format: gs://p2m-accelerator-ufp/video_generation/9464644098597267599/sample_0.mp4
+                            const pathParts = gcsUri.replace(`gs://${bucketName}/${videoFolder}/`, '').split('/');
+                            const folder = pathParts[0]; // timestamp folder
+                            const filename = pathParts[1]; // sample_0.mp4
 
-                            // Generate signed URL (works in Cloud Run with service account)
-                            const bucket = storage.bucket(bucketName);
-                            const file = bucket.file(`${videoFolder}/${filename}`);
+                            // Return proxy URL instead of signed URL (avoids IAM permission issues)
+                            const proxyUrl = `/api/videos/stream/${folder}/${filename}`;
 
-                            const [signedUrl] = await file.getSignedUrl({
-                                version: 'v4',
-                                action: 'read',
-                                expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-                            });
-
-                            console.log(`🔗 Generated signed URL for video ${index + 1}`);
+                            console.log(`🔗 Created proxy URL for video ${index + 1}`);
                             console.log(`   GCS Path: ${gcsUri}`);
-                            console.log(`   Signed URL: ${signedUrl.substring(0, 100)}...`);
+                            console.log(`   Proxy URL: ${proxyUrl}`);
 
-                            return signedUrl;
+                            return proxyUrl;
                         })
                     );
 
@@ -487,6 +483,41 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
     } catch (error) {
         console.error('Error fetching operation status:', error);
         res.status(500).json({ error: 'Failed to fetch operation status.' });
+    }
+});
+
+// Endpoint to stream a video from GCS (proxy to avoid signed URL issues)
+app.get('/api/videos/stream/:folder/:filename', async (req, res) => {
+    try {
+        const { folder, filename } = req.params;
+        const bucket = storage.bucket(bucketName);
+        const file = bucket.file(`${videoFolder}/${folder}/${filename}`);
+
+        // Check if file exists
+        const [exists] = await file.exists();
+        if (!exists) {
+            return res.status(404).json({ error: 'Video not found' });
+        }
+
+        // Get file metadata for content type and size
+        const [metadata] = await file.getMetadata();
+
+        res.setHeader('Content-Type', metadata.contentType || 'video/mp4');
+        res.setHeader('Content-Length', metadata.size);
+        res.setHeader('Accept-Ranges', 'bytes');
+
+        // Stream the file directly to response
+        file.createReadStream()
+            .on('error', (err) => {
+                console.error('Error streaming video:', err);
+                if (!res.headersSent) {
+                    res.status(500).json({ error: 'Failed to stream video' });
+                }
+            })
+            .pipe(res);
+    } catch (error) {
+        console.error('Error in video stream endpoint:', error);
+        res.status(500).json({ error: 'Failed to stream video' });
     }
 });
 
