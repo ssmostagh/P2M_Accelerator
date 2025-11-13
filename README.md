@@ -1,36 +1,230 @@
-# Universal Fashion Platform
+# P2M Accelerator: Ultra-Fast Production Design Studio
 
-This project is a web application that allows users to virtually try on garments. It uses a backend powered by Google's Gemini API to generate images and videos of a model wearing a selected garment.
+A powerful web application for virtual garment try-on and fashion design, powered by Google's Gemini AI. This tool allows users to visualize garments on models, apply fabric changes, generate front and back views, and create dynamic catwalk videos.
 
-## Running the Project
+## Features
 
-### Prerequisites
+- **Virtual Try-On**: Seamlessly place garments on model images with realistic rendering
+- **AI-Powered Design**: Generate multiple variations of designs using Gemini 2.5 Flash
+- **Fabric Library**: Apply different fabric patterns and textures to garments
+- **Multi-View Generation**: Automatically generate front and back views
+- **Edit Studio**: Make iterative edits with natural language prompts
+- **Video Generation**: Create catwalk-style videos using Veo 3.1
+- **History Tracking**: Keep track of all design iterations
+- **Export Options**: Download finalized images and videos
 
-- Node.js and npm
-- A Google Cloud project with the AI Platform API enabled
-- Authenticated `gcloud` CLI
+## Technology Stack
 
-### Installation
+- **Frontend**: React, TypeScript, Tailwind CSS, Vite
+- **Backend**: Node.js, Express
+- **AI Models**:
+  - Gemini 2.5 Flash for image editing
+  - Gemini 2.5 Pro for garment description
+  - Veo 3.1 for video generation
+- **Cloud Services**: Google Cloud Storage, Vertex AI
 
-1.  Clone the repository.
-2.  Install the dependencies:
+## Prerequisites
 
-    ```bash
-    npm install
-    ```
+Before setting up the project, ensure you have:
 
-### Running the Application
+- **Node.js** (v18 or higher) and **npm**
+- **Google Cloud Project** with billing enabled
+- **gcloud CLI** installed and authenticated
 
-1.  Set the `GOOGLE_PROJECT_ID` environment variable to your Google Cloud project ID:
+## Google Cloud Setup
 
-    ```bash
-    export GOOGLE_PROJECT_ID="your-project-id"
-    ```
+### 1. Enable Required APIs
 
-2.  Start the server:
+Enable the following APIs in your Google Cloud project:
 
-    ```bash
-    node server.js
-    ```
+```bash
+gcloud services enable aiplatform.googleapis.com
+gcloud services enable storage-api.googleapis.com
+gcloud services enable storage-component.googleapis.com
+```
 
-3.  Open your browser and navigate to `http://localhost:8080`.
+Or enable them via the [Google Cloud Console](https://console.cloud.google.com/apis/library):
+- Vertex AI API
+- Cloud Storage API
+
+### 2. Create a Google Cloud Storage Bucket
+
+Create a GCS bucket for storing generated videos:
+
+```bash
+gcloud storage buckets create gs://your-bucket-name \
+  --project=your-project-id \
+  --location=us-central1 \
+  --uniform-bucket-level-access
+```
+
+### 3. Authenticate with Google Cloud
+
+Authenticate your local environment:
+
+```bash
+gcloud auth application-default login
+```
+
+This creates credentials that the application will use to access Google Cloud services.
+
+### 4. Set Required Permissions
+
+Ensure your account or service account has the following roles:
+- `roles/aiplatform.user` - For Vertex AI API access
+- `roles/storage.objectAdmin` - For GCS bucket access
+
+## Installation
+
+1. **Clone the repository**:
+
+```bash
+git clone <repository-url>
+cd UFP
+```
+
+2. **Install dependencies**:
+
+```bash
+npm install
+```
+
+3. **Configure environment variables**:
+
+Copy the example environment file and update it with your values:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your Google Cloud configuration:
+
+```env
+# Google Cloud Configuration
+GOOGLE_GENAI_USE_VERTEXAI=true
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+
+# Google Cloud Storage
+GCS_BUCKET_NAME=your-bucket-name
+GCS_VIDEO_FOLDER=video_generation
+```
+
+## Running the Application
+
+### Development Mode
+
+Start both the frontend development server and backend server concurrently:
+
+```bash
+npm start
+```
+
+This will:
+- Start the Vite dev server on `http://localhost:5173`
+- Start the Express backend server on `http://localhost:8080`
+- Enable hot module reloading for the frontend
+
+### Production Build
+
+1. **Build the frontend**:
+
+```bash
+npm run build
+```
+
+2. **Start the production server**:
+
+```bash
+node server.js
+```
+
+3. **Access the application**:
+
+Open your browser and navigate to `http://localhost:8080`
+
+### Preview Production Build Locally
+
+To preview the production build without running the backend:
+
+```bash
+npm run serve
+```
+
+## Project Structure
+
+```
+UFP/
+├── components/           # React components
+│   ├── FinalizePanel.tsx
+│   ├── EditStudio.tsx
+│   ├── VirtualTryOn.tsx
+│   ├── FabricLibrary.tsx
+│   ├── HistoryPanel.tsx
+│   └── VideoPlayerModal.tsx
+├── services/            # API service layer
+│   └── geminiService.ts
+├── types/               # TypeScript type definitions
+│   └── index.ts
+├── server.js            # Express backend server
+├── App.tsx              # Main React application
+├── main.tsx             # React entry point
+├── index.html           # HTML template
+├── dist/                # Production build output
+└── .env                 # Environment variables (not committed)
+```
+
+## Usage
+
+1. **Upload Images**: Upload a model image and a garment image
+2. **Generate Initial Design**: Click "Generate Design" to create virtual try-on variations
+3. **Select Variation**: Choose your preferred variation from the generated options
+4. **Edit Design**: Use the edit studio to make changes with natural language prompts
+5. **Apply Fabrics**: Select fabrics from the library to apply to specific garments
+6. **Finalize Front**: Click "Finalize Front Design" when satisfied
+7. **Generate Back View**: Automatically generate the back view of the garment
+8. **Finalize Back**: Review and finalize the back view
+9. **Generate Video**: Create a catwalk video showing front and back views
+10. **Export**: Download finalized images and videos
+
+## Troubleshooting
+
+### Authentication Errors
+
+If you see authentication errors, ensure:
+- `gcloud auth application-default login` has been run
+- Your Google Cloud project has billing enabled
+- Required APIs are enabled
+
+### Video Generation Issues
+
+If video generation fails:
+- Verify the GCS bucket exists and is accessible
+- Check that the bucket location matches `GOOGLE_CLOUD_LOCATION`
+- Ensure your account has `storage.objectAdmin` role
+
+### Port Already in Use
+
+If port 8080 is already in use, set a different port:
+
+```bash
+PORT=3000 node server.js
+```
+
+## Environment Variables Reference
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GOOGLE_CLOUD_PROJECT` | Yes | - | Your Google Cloud project ID |
+| `GOOGLE_CLOUD_LOCATION` | No | `us-central1` | Google Cloud region for Vertex AI |
+| `GCS_BUCKET_NAME` | Yes | - | GCS bucket name for video storage |
+| `GCS_VIDEO_FOLDER` | No | `video_generation` | Folder path within the bucket |
+| `PORT` | No | `8080` | Port for the Express server |
+
+## License
+
+[Add your license here]
+
+## Credits
+
+Built by: mostaghim@
