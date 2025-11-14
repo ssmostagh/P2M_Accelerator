@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { InputForm } from '../components/InputForm';
 import { MoodboardGrid } from '../components/MoodboardGrid';
-import { SparklesIcon } from '../components/icons';
 import {
   PANEL_LAYOUTS,
   FIGURE_PROMPTS,
@@ -76,7 +75,6 @@ export default function MoodboardPage() {
       const promptAssignments: string[] = [];
 
       // Shuffle all prompt categories
-      const shuffledFigures = shuffleArray(FIGURE_PROMPTS);
       const shuffledObjects = shuffleArray(OBJECT_PROMPTS);
       const shuffledScenery = shuffleArray(SCENERY_PROMPTS);
       const shuffledTextures = shuffleArray(TEXTURE_PROMPTS);

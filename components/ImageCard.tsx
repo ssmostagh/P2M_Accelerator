@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { useGeminiImage } from '../hooks/useGeminiImage.ts';
 import { Loader } from './Loader.tsx';
 import { RefreshIcon, CheckIcon, XIcon, RewriteIcon, HistoryIcon } from './icons.tsx';
-import { getAudienceFigureConstraint } from '../constants/moodboardConstants';
 import type { ImagePanelData, PanelLayout } from '../types.ts';
 
 interface ImageHistoryItem {
