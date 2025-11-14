@@ -313,7 +313,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Column 2 */}
-        <div className="col-span-6 flex flex-col">
+        <div className="col-span-6 flex flex-col overflow-y-auto">
           <EditStudio
             image={designView === DesignView.FRONT ? currentImage : backImage}
             prompt={editPrompt}

@@ -35,7 +35,7 @@ export function ColorCard({ panelData, layout }: ColorCardProps) {
 
   const { code: pantoneCode, displayName } = parsePantoneName(currentColor.name);
 
-  const handleRegenerate = async (e: React.MouseEvent) => {
+  const handleRegenerate = async (e: React.MouseEvent, direction?: 'lighter' | 'darker') => {
     e.stopPropagation();
     setIsLoading(true);
     setError(null);
@@ -46,7 +46,7 @@ export function ColorCard({ panelData, layout }: ColorCardProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           func: 'regenerateColor',
-          args: [currentColor.name, panelData.prompt]
+          args: [currentColor.name, panelData.prompt, direction]
         })
       });
 
@@ -85,7 +85,25 @@ export function ColorCard({ panelData, layout }: ColorCardProps) {
           <p className="text-xs text-white font-semibold">Error</p>
         </div>
       )}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 z-10">
+        <div className="flex gap-2">
+          <button
+            onClick={(e) => handleRegenerate(e, 'lighter')}
+            className="px-3 py-1 text-xs bg-white/20 rounded backdrop-blur-sm hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-transform duration-200 transform active:scale-90 text-white font-medium"
+            aria-label="Get lighter color"
+            disabled={isLoading}
+          >
+            ↑ Lighter
+          </button>
+          <button
+            onClick={(e) => handleRegenerate(e, 'darker')}
+            className="px-3 py-1 text-xs bg-white/20 rounded backdrop-blur-sm hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-transform duration-200 transform active:scale-90 text-white font-medium"
+            aria-label="Get darker color"
+            disabled={isLoading}
+          >
+            ↓ Darker
+          </button>
+        </div>
         <button
           onClick={handleRegenerate}
           className="p-2 bg-white/20 rounded-full backdrop-blur-sm hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-transform duration-200 transform active:scale-90"

@@ -36,25 +36,25 @@ const ImageUpload: React.FC<{
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-2">
+      <label htmlFor={id} className="block text-xs font-medium text-gray-300 mb-1">
         {label}
       </label>
-      <div className="mt-1 flex justify-center px-4 pt-3 pb-4 border-2 border-gray-600 border-dashed rounded-md">
+      <div className="flex justify-center px-2 pt-2 pb-2 border-2 border-gray-600 border-dashed rounded-md">
         <div className="space-y-1 text-center">
           {previewUrl ? (
-            <img src={previewUrl} alt="Preview" className="mx-auto h-24 w-24 object-cover rounded-md" />
+            <img src={previewUrl} alt="Preview" className="mx-auto h-20 w-20 object-cover rounded-md" />
           ) : (
-            <svg className="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+            <svg className="mx-auto h-10 w-10 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
               <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
-          <div className="flex text-sm text-gray-400 justify-center">
+          <div className="flex text-xs text-gray-400 justify-center">
             <label htmlFor={id} className="relative cursor-pointer bg-gray-700 rounded-md font-medium text-purple-400 hover:text-purple-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-gray-800 focus-within:ring-purple-500 px-2 py-1">
-              <span>Upload a file</span>
+              <span>Upload</span>
               <input id={id} name={id} type="file" className="sr-only" accept="image/png, image/jpeg" onChange={handleFileChange} />
             </label>
           </div>
-          <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
+          <p className="text-xs text-gray-500">PNG, JPG</p>
         </div>
       </div>
     </div>
@@ -72,9 +72,9 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
   return (
     <div className="bg-gray-800 p-3 rounded-lg shadow-lg flex flex-col flex-shrink-0">
       <h2 className="text-lg font-bold mb-2 text-purple-300">Virtual Try-On</h2>
-      <div className="space-y-3 flex-grow">
-        <ImageUpload file={garmentImage} setFile={setGarmentImage} label="Garment Image" id="garment-upload" />
+      <div className="grid grid-cols-2 gap-2 flex-grow">
         <ImageUpload file={modelImage} setFile={setModelImage} label="Model Image" id="model-upload" />
+        <ImageUpload file={garmentImage} setFile={setGarmentImage} label="Garment Image" id="garment-upload" />
       </div>
       <div className="mt-3">
         <button

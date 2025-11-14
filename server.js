@@ -378,20 +378,49 @@ const generateMoodboardImage = async (prompt, aspectRatio) => {
     }
 };
 
-const regenerateColor = async (currentColorName, themePrompt) => {
+const regenerateColor = async (currentColorName, themePrompt, direction) => {
     console.log('🔄 Regenerating color from real Pantone colors');
     console.log(`Current color: ${currentColorName}`);
+    console.log(`Direction: ${direction || 'random'}`);
     console.log(`Theme: ${themePrompt}`);
 
+    // Find the current color to get its hex value
+    const currentColor = PANTONE_COLORS.find(c => c.name === currentColorName);
+
     // Get a different color from the Pantone database
-    // Filter out the current color
-    const availableColors = PANTONE_COLORS.filter(color => color.name !== currentColorName);
+    let availableColors = PANTONE_COLORS.filter(color => color.name !== currentColorName);
+
+    // If direction is specified, filter by lightness
+    if (direction && currentColor) {
+        const currentHex = currentColor.code.toLowerCase();
+        const currentR = parseInt(currentHex.substring(1, 3), 16);
+        const currentG = parseInt(currentHex.substring(3, 5), 16);
+        const currentB = parseInt(currentHex.substring(5, 7), 16);
+        // Calculate perceived brightness (using standard formula)
+        const currentBrightness = (currentR * 299 + currentG * 587 + currentB * 114) / 1000;
+
+        availableColors = availableColors.filter(color => {
+            const hex = color.code.toLowerCase();
+            const r = parseInt(hex.substring(1, 3), 16);
+            const g = parseInt(hex.substring(3, 5), 16);
+            const b = parseInt(hex.substring(5, 7), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+            if (direction === 'lighter') {
+                return brightness > currentBrightness + 20; // At least 20 points brighter
+            } else if (direction === 'darker') {
+                return brightness < currentBrightness - 20; // At least 20 points darker
+            }
+            return true;
+        });
+
+        console.log(`Filtered to ${availableColors.length} ${direction} colors`);
+    }
 
     // If we can extract keywords from the theme prompt, use them
-    // Otherwise, pick a random color
     let newColor;
 
-    if (themePrompt && themePrompt.length > 10) {
+    if (themePrompt && themePrompt.length > 10 && availableColors.length > 0) {
         // Extract keywords from theme prompt (look for quoted text after "theme" or "keywords")
         const keywordMatch = themePrompt.match(/keywords[:\s]+['"](.*?)['"]/i);
         const themeMatch = themePrompt.match(/theme[:\s]+['"](.*?)['"]/i);
@@ -400,9 +429,15 @@ const regenerateColor = async (currentColorName, themePrompt) => {
             const keywords = keywordMatch ? keywordMatch[1] : themeMatch[1];
             console.log(`Using keywords for color selection: ${keywords}`);
 
-            // Get complementary colors and pick one that's different from current
-            const complementaryColors = getComplementaryPantoneColors(keywords, 15)
-                .filter(color => color.name !== currentColorName);
+            // Get complementary colors and pick one that's different from current and matches direction
+            const complementaryColors = getComplementaryPantoneColors(keywords, 20)
+                .filter(color => {
+                    // Must not be the current color
+                    if (color.name === currentColorName) return false;
+
+                    // Must be in the availableColors (respects direction filter)
+                    return availableColors.some(ac => ac.code === color.code);
+                });
 
             if (complementaryColors.length > 0) {
                 newColor = complementaryColors[Math.floor(Math.random() * complementaryColors.length)];
@@ -410,9 +445,16 @@ const regenerateColor = async (currentColorName, themePrompt) => {
         }
     }
 
-    // Fallback to random color if no match found
-    if (!newColor) {
+    // Fallback to random color from available colors
+    if (!newColor && availableColors.length > 0) {
         newColor = availableColors[Math.floor(Math.random() * availableColors.length)];
+    }
+
+    // If still no color (e.g., all colors are darker and we asked for lighter), pick any different color
+    if (!newColor) {
+        const fallbackColors = PANTONE_COLORS.filter(color => color.name !== currentColorName);
+        newColor = fallbackColors[Math.floor(Math.random() * fallbackColors.length)];
+        console.log('⚠️ Could not find color in requested direction, using fallback');
     }
 
     console.log(`✅ Selected new Pantone color: ${newColor.name}`);

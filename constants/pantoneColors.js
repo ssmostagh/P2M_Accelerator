@@ -390,191 +390,34 @@ export function getRandomPantoneColors(count = 8) {
 export function getComplementaryPantoneColors(keywords, count = 8) {
   const lowerKeywords = keywords.toLowerCase();
 
-  // Curated color palettes based on common fashion themes
-  if (lowerKeywords.includes('autumn') || lowerKeywords.includes('fall')) {
-    const autumnColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("Russet") || c.name.includes("Cognac") ||
-      c.name.includes("Leather Brown") || c.name.includes("Olive Branch") ||
-      c.name.includes("Burgundy") || c.name.includes("Sandstone") ||
-      c.name.includes("Saffron") || c.name.includes("Forest Night") ||
-      c.name.includes("Adobe") || c.name.includes("Glazed Ginger") ||
-      c.name.includes("Cathay Spice") || c.name.includes("Burnt Brick") ||
-      c.name.includes("Harvest Gold") || c.name.includes("Bronze Mist")
-    );
-    return shuffleAndSelect(autumnColors, count);
-  }
+  // Very loose filtering - mainly exclude colors that would be obviously wrong
+  let excludeColors = [];
 
-  if (lowerKeywords.includes('spring') || lowerKeywords.includes('floral')) {
-    const springColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("Peach Blossom") || c.name.includes("Tender Shoots") ||
-      c.name.includes("Aqua Sky") || c.name.includes("Pastel Lavender") ||
-      c.name.includes("Coral Pink") || c.name.includes("Buttercream") ||
-      c.name.includes("Mint") || c.name.includes("Primrose Yellow") ||
-      c.name.includes("Lilac") || c.name.includes("Sweet Lavender") ||
-      c.name.includes("Pool Blue") || c.name.includes("Fair Green")
-    );
-    return shuffleAndSelect(springColors, count);
-  }
-
-  if (lowerKeywords.includes('boho') || lowerKeywords.includes('bohemian') ||
-      lowerKeywords.includes('romantic') || lowerKeywords.includes('garden') ||
-      lowerKeywords.includes('soft') || lowerKeywords.includes('ethereal') ||
-      lowerKeywords.includes('dreamy') || lowerKeywords.includes('airy') ||
-      lowerKeywords.includes('pastel') || lowerKeywords.includes('delicate')) {
-
-    console.log('🎨 Soft theme detected! Keywords:', lowerKeywords);
-
-    const softColors = PANTONE_COLORS.filter(c => {
+  // For explicitly pastel/soft themes - exclude only very dark/harsh colors
+  if (lowerKeywords.includes('pastel') || lowerKeywords.includes('delicate')) {
+    excludeColors = PANTONE_COLORS.filter(c => {
       const name = c.name.toLowerCase();
-      const hex = c.code.toLowerCase();
-
-      // Explicitly exclude dark colors by name
-      const isDarkColor = name.includes("burgundy") || name.includes("cabernet") ||
-        name.includes("royal purple") || name.includes("deep") || name.includes("dark") ||
-        name.includes("black") || name.includes("navy") || name.includes("chocolate") ||
-        name.includes("espresso") || name.includes("mahogany") || name.includes("noir") ||
-        name.includes("night") || name.includes("raven") || name.includes("shadow");
-
-      if (isDarkColor) return false;
-
-
-      // Check if color is light/pastel by hex code - much more permissive now
-      const r = parseInt(hex.substring(1, 3), 16);
-      const g = parseInt(hex.substring(3, 5), 16);
-      const b = parseInt(hex.substring(5, 7), 16);
-      // At least 2 of the 3 channels should be above 140, OR any single channel above 200
-      const isLight = (r > 140 && g > 140) || (r > 140 && b > 140) || (g > 140 && b > 140) ||
-                      r > 200 || g > 200 || b > 200;
-
-      // Check for soft color names - prioritize romantic colors
-      const hasRomanticName = name.includes("rose") || name.includes("blush") ||
-        name.includes("lavender") || name.includes("lilac") || name.includes("pink") ||
-        name.includes("mint") || name.includes("sage") || name.includes("aqua") ||
-        name.includes("periwinkle") || name.includes("violet") || name.includes("mauve");
-
-      const hasSoftName = name.includes("cloud") || name.includes("ballerina") ||
-        name.includes("almond") || name.includes("potpourri") || name.includes("peach") ||
-        name.includes("brook") || name.includes("fair") || name.includes("cream") ||
-        name.includes("pale") || name.includes("tender") || name.includes("sweet") ||
-        name.includes("pastel") || name.includes("barely") || name.includes("serenity") ||
-        name.includes("dusty") || name.includes("mist") || name.includes("bellini") ||
-        name.includes("butter") || name.includes("ivory") || name.includes("vanilla") ||
-        name.includes("whisper") || name.includes("powder") || name.includes("ice") ||
-        name.includes("frost") || name.includes("petal") || name.includes("blossom") ||
-        name.includes("dew") || name.includes("silk") || name.includes("soft") ||
-        name.includes("gentle") || name.includes("light") || name.includes("angel") ||
-        name.includes("shell") || name.includes("snow") || name.includes("pearl") ||
-        name.includes("opal");
-
-      // Prioritize romantic names for romantic themes
-      if (isRomanticTheme && hasRomanticName) return true;
-
-      // Use OR logic: must be EITHER light OR have soft name (more permissive)
-      return isLight || hasSoftName;
+      return name.includes("black") || name.includes("noir") ||
+             name.includes("neon") || name.includes("electric");
     });
-
-    console.log(`✨ Found ${softColors.length} soft colors before shuffleAndSelect`);
-
-    return shuffleAndSelectDiverse(softColors, count, true); // Pass true to indicate soft theme
+  }
+  // For neon/electric themes - exclude muted colors
+  else if (lowerKeywords.includes('neon') || lowerKeywords.includes('electric')) {
+    excludeColors = PANTONE_COLORS.filter(c => {
+      const name = c.name.toLowerCase();
+      return name.includes("gray") || name.includes("grey") ||
+             name.includes("muted") || name.includes("dusty");
+    });
   }
 
-  if (lowerKeywords.includes('summer') || lowerKeywords.includes('bright')) {
-    const summerColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("Turquoise") || c.name.includes("Coral Reef") ||
-      c.name.includes("Lemon Chrome") || c.name.includes("Mykonos Blue") ||
-      c.name.includes("Flame") || c.name.includes("Mint") ||
-      c.name.includes("Bachelor Button") || c.name.includes("Apricot Blush") ||
-      c.name.includes("Malibu Blue") || c.name.includes("Vibrant Yellow") ||
-      c.name.includes("Hot Coral") || c.name.includes("Paradise Green")
-    );
-    return shuffleAndSelect(summerColors, count);
-  }
+  // Filter out excluded colors
+  const excludedCodes = new Set(excludeColors.map(c => c.code));
+  const availableColors = PANTONE_COLORS.filter(c => !excludedCodes.has(c.code));
 
-  if (lowerKeywords.includes('winter') || lowerKeywords.includes('cold') || lowerKeywords.includes('ice')) {
-    const winterColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("Classic Blue") || c.name.includes("Peacoat") ||
-      c.name.includes("Glacier Gray") || c.name.includes("Barely Blue") ||
-      c.name.includes("Dark Shadow") || c.name.includes("Vapor Blue") ||
-      c.name.includes("Total Eclipse") || c.name.includes("Bright White") ||
-      c.name.includes("Ice") || c.name.includes("Sterling Blue") ||
-      c.name.includes("Navy Blazer") || c.name.includes("Morning Mist")
-    );
-    return shuffleAndSelect(winterColors, count);
-  }
+  console.log(`🎨 Available colors after exclusions: ${availableColors.length}/${PANTONE_COLORS.length}`);
 
-  if (lowerKeywords.includes('earth') || lowerKeywords.includes('natural') || lowerKeywords.includes('organic')) {
-    const earthColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("Leather Brown") || c.name.includes("Olive Branch") ||
-      c.name.includes("Tan") || c.name.includes("Sandstone") ||
-      c.name.includes("Parchment") || c.name.includes("Verdant Green") ||
-      c.name.includes("Peat") || c.name.includes("Iced Coffee") ||
-      c.name.includes("Warm Sand") || c.name.includes("Sage Green") ||
-      c.name.includes("Brindle") || c.name.includes("Fossil")
-    );
-    return shuffleAndSelect(earthColors, count);
-  }
-
-  if (lowerKeywords.includes('luxury') || lowerKeywords.includes('elegant') || lowerKeywords.includes('sophisticated')) {
-    const luxuryColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("Jet Black") || c.name.includes("Burgundy") ||
-      c.name.includes("Navy Blazer") || c.name.includes("Cognac") ||
-      c.name.includes("Excalibur") || c.name.includes("Majesty") ||
-      c.name.includes("Cabernet") || c.name.includes("Bright White") ||
-      c.name.includes("Champagne") || c.name.includes("Chinchilla") ||
-      c.name.includes("Royal Purple") || c.name.includes("Deep Purple")
-    );
-    return shuffleAndSelect(luxuryColors, count);
-  }
-
-  if (lowerKeywords.includes('pastel') || lowerKeywords.includes('soft') || lowerKeywords.includes('delicate')) {
-    const pastelColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("Peach Blossom") || c.name.includes("Almond Blossom") ||
-      c.name.includes("Buttercream") || c.name.includes("Crystal Blue") ||
-      c.name.includes("Pastel Lavender") || c.name.includes("Apricot Blush") ||
-      c.name.includes("Morning Mist") || c.name.includes("Cloud Cream") ||
-      c.name.includes("Orchid Tint") || c.name.includes("Lilac Snow") ||
-      c.name.includes("Fair Green") || c.name.includes("Angel Blue")
-    );
-    return shuffleAndSelect(pastelColors, count);
-  }
-
-  if (lowerKeywords.includes('bold') || lowerKeywords.includes('vibrant') || lowerKeywords.includes('neon')) {
-    const boldColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("Chili Pepper") || c.name.includes("Ultra Violet") ||
-      c.name.includes("Emerald") || c.name.includes("Flame") ||
-      c.name.includes("Mykonos Blue") || c.name.includes("Rapture Rose") ||
-      c.name.includes("Dandelion") || c.name.includes("Online Lime") ||
-      c.name.includes("Shocking Orange") || c.name.includes("Magenta") ||
-      c.name.includes("Lime Punch") || c.name.includes("Fiery Red")
-    );
-    return shuffleAndSelect(boldColors, count);
-  }
-
-  if (lowerKeywords.includes('dark') || lowerKeywords.includes('academia') || lowerKeywords.includes('moody')) {
-    const darkColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("Black") || c.name.includes("Navy") ||
-      c.name.includes("Burgundy") || c.name.includes("Forest Night") ||
-      c.name.includes("Deep Purple") || c.name.includes("Dark Sapphire") ||
-      c.name.includes("Peat") || c.name.includes("Hunter Green") ||
-      c.name.includes("Cordovan") || c.name.includes("Total Eclipse") ||
-      c.name.includes("Mole") || c.name.includes("Raven")
-    );
-    return shuffleAndSelect(darkColors, count);
-  }
-
-  if (lowerKeywords.includes('neutral') || lowerKeywords.includes('minimal') || lowerKeywords.includes('monochrome')) {
-    const neutralColors = PANTONE_COLORS.filter(c =>
-      c.name.includes("White") || c.name.includes("Gray") ||
-      c.name.includes("Beige") || c.name.includes("Taupe") ||
-      c.name.includes("Sand") || c.name.includes("Cream") ||
-      c.name.includes("Parchment") || c.name.includes("Stone") ||
-      c.name.includes("Black") || c.name.includes("Dove")
-    );
-    return shuffleAndSelect(neutralColors, count);
-  }
-
-  // Default: return random colors ensuring good variety
-  return getRandomPantoneColors(count);
+  // Use diversity function to select varied colors
+  return shuffleAndSelectDiverse(availableColors, count, false);
 }
 
 // Helper to check if two colors are similar (same hue range)
