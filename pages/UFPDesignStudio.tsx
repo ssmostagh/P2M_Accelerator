@@ -282,7 +282,7 @@ const App: React.FC = () => {
   const isImageEditable = !!(designView === DesignView.FRONT ? currentImage : backImage);
 
   return (
-    <div className="h-full p-4 sm:p-6 lg:p-8 bg-gray-900 font-sans flex flex-col overflow-hidden">
+    <div className="h-full p-2 sm:p-4 lg:p-6 bg-gray-900 font-sans flex flex-col overflow-hidden">
       {error && (
         <div className="bg-red-800 border border-red-600 text-white px-4 py-3 rounded-lg relative mb-6 max-w-4xl mx-auto flex-shrink-0" role="alert">
           <strong className="font-bold">Error: </strong>
@@ -293,9 +293,9 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className="grid grid-cols-12 gap-6 flex-grow min-h-0 overflow-auto">
+      <main className="grid grid-cols-12 gap-4 flex-grow min-h-0 overflow-hidden">
         {/* Column 1 */}
-        <div className="col-span-3 flex flex-col gap-6">
+        <div className="col-span-3 flex flex-col gap-4 overflow-y-auto">
           <VirtualTryOn
             modelImage={modelImage}
             setModelImage={setModelImage}
@@ -329,7 +329,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Column 3 */}
-        <div className="col-span-3 flex flex-col gap-6 min-h-0">
+        <div className="col-span-3 flex flex-col gap-4 min-h-0 overflow-y-auto">
           <FinalizePanel
             onFinalizeFront={handleFinalize}
             onFinalizeBack={handleFinalizeBack}

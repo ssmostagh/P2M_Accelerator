@@ -31,10 +31,10 @@ export const FabricLibrary: React.FC<FabricLibraryProps> = ({ onSelectFabric, is
   const areSwatchesDisabled = !isActionable || !targetGarment;
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow-lg">
-      <h2 className="text-xl font-bold mb-4 text-purple-300">Fabric Library</h2>
-      
-      <div className="mb-4">
+    <div className="bg-gray-800 p-3 rounded-lg shadow-lg flex-shrink-0">
+      <h2 className="text-lg font-bold mb-2 text-purple-300">Fabric Library</h2>
+
+      <div className="mb-2">
         <label htmlFor="target-garment" className="block text-sm font-medium text-gray-300 mb-1">
           Target Garment
         </label>
@@ -67,7 +67,7 @@ export const FabricLibrary: React.FC<FabricLibraryProps> = ({ onSelectFabric, is
               key={fabric.id}
               onClick={() => onSelectFabric(fabric.prompt, fabric.name)}
               disabled={areSwatchesDisabled}
-              className="w-24 h-24 flex-shrink-0 group relative rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:cursor-not-allowed"
+              className="w-16 h-16 flex-shrink-0 group relative rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:cursor-not-allowed"
               title={`Apply ${fabric.name}`}
             >
               <img

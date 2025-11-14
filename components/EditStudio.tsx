@@ -58,14 +58,14 @@ export const EditStudio: React.FC<EditStudioProps> = ({
   const canEdit = (view === DesignView.FRONT && image) || (view === DesignView.BACK && image);
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow-lg h-full flex flex-col">
-      <h2 className="text-xl font-bold mb-4 text-purple-300">
+    <div className="bg-gray-800 p-3 rounded-lg shadow-lg h-full flex flex-col">
+      <h2 className="text-lg font-bold mb-2 text-purple-300">
         {view === DesignView.FRONT ? 'Design Studio: Front View' : 'Design Studio: Back View'}
       </h2>
-      
+
       {(isGeneratingVariations || editVariations.length > 0) && (
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2 text-gray-300">
+        <div className="mb-2">
+          <h3 className="text-sm font-semibold mb-1 text-gray-300">
             {isGeneratingVariations ? 'Generating Variations...' : 'Select a Variation'}
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -96,7 +96,7 @@ export const EditStudio: React.FC<EditStudioProps> = ({
         </div>
       )}
 
-      <div className="aspect-w-1 aspect-h-1 w-full bg-gray-900 rounded-lg overflow-hidden mb-4 flex-grow min-h-0">
+      <div className="aspect-w-1 aspect-h-1 w-full bg-gray-900 rounded-lg overflow-hidden mb-2 flex-grow min-h-0">
         {isLoading && !image ? <LoadingSkeleton /> : 
           image ? (
             <div className="relative w-full h-full">

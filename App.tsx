@@ -12,7 +12,7 @@ const App: React.FC = () => {
         {/* Navigation Bar */}
         <nav className="bg-gray-800 border-b border-gray-700 flex-shrink-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
+            <div className="flex items-center justify-between h-12">
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
                   P2M Accelerator
@@ -85,7 +85,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <footer className="bg-gray-800 border-t border-gray-700 py-4 flex-shrink-0">
+        <footer className="bg-gray-800 border-t border-gray-700 py-2 flex-shrink-0">
           <p className="text-center text-xs text-gray-500">
             Powered by Gemini
           </p>

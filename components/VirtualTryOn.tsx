@@ -39,7 +39,7 @@ const ImageUpload: React.FC<{
       <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-2">
         {label}
       </label>
-      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
+      <div className="mt-1 flex justify-center px-4 pt-3 pb-4 border-2 border-gray-600 border-dashed rounded-md">
         <div className="space-y-1 text-center">
           {previewUrl ? (
             <img src={previewUrl} alt="Preview" className="mx-auto h-24 w-24 object-cover rounded-md" />
@@ -70,13 +70,13 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
   isLoading,
 }) => {
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col">
-      <h2 className="text-xl font-bold mb-4 text-purple-300">Virtual Try-On</h2>
-      <div className="space-y-4 flex-grow">
+    <div className="bg-gray-800 p-3 rounded-lg shadow-lg flex flex-col flex-shrink-0">
+      <h2 className="text-lg font-bold mb-2 text-purple-300">Virtual Try-On</h2>
+      <div className="space-y-3 flex-grow">
         <ImageUpload file={garmentImage} setFile={setGarmentImage} label="Garment Image" id="garment-upload" />
         <ImageUpload file={modelImage} setFile={setModelImage} label="Model Image" id="model-upload" />
       </div>
-      <div className="mt-6">
+      <div className="mt-3">
         <button
           onClick={onGenerate}
           disabled={!modelImage || !garmentImage || isLoading}
