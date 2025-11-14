@@ -77,6 +77,7 @@ export function ImageCard({ panelData, layout, collectionTitle, collectionKeywor
   const generatePromptForType = (type: string): string => {
     const figureBasePrompt = `A single, professional, high-quality fashion photograph. Theme: '${collectionTitle || 'Fashion Collection'}'. Keywords: ${collectionKeywords || 'stylish, modern'}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Audience: ${collectionAudience || 'Fashion enthusiasts'}.`;
     const nonFigureBasePrompt = `A single, professional, high-quality photograph. Theme: '${collectionTitle || 'Fashion Collection'}'. Keywords: ${collectionKeywords || 'stylish, modern'}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Do NOT include people or models in the image. Focus on the subject matter. Audience: ${collectionAudience || 'Fashion enthusiasts'}.`;
+    const illustrationBasePrompt = `A single, professional, high-quality fashion illustration. Theme: '${collectionTitle || 'Fashion Collection'}'. Keywords: ${collectionKeywords || 'stylish, modern'}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Style: artistic, hand-drawn, watercolor, digital illustration, or fashion sketch. Audience: ${collectionAudience || 'Fashion enthusiasts'}.`;
 
     switch (type) {
       case 'object':
@@ -89,6 +90,8 @@ export function ImageCard({ panelData, layout, collectionTitle, collectionKeywor
         return `${figureBasePrompt} Focus on: A fashion model or figure showcasing the style. Full body or artistic cropped shot. Emphasize pose, silhouette, and attitude that matches the collection's aesthetic.`;
       case 'texture':
         return `${nonFigureBasePrompt} Focus on: Extreme close-up of surface texture, pattern, or material detail. Abstract and artistic, emphasizing tactile qualities and visual interest.`;
+      case 'illustration':
+        return `${illustrationBasePrompt} Focus on: A fashion illustration showing the collection's aesthetic. Can be a fashion figure, garment flat, or artistic interpretation. Emphasize artistic style, clean lines, and the collection's mood and vibe.`;
       default:
         return panelData.prompt;
     }
