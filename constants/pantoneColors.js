@@ -437,6 +437,7 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
 
       if (isDarkColor) return false;
 
+
       // Check if color is light/pastel by hex code - much more permissive now
       const r = parseInt(hex.substring(1, 3), 16);
       const g = parseInt(hex.substring(3, 5), 16);
@@ -445,30 +446,88 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
       const isLight = (r > 140 && g > 140) || (r > 140 && b > 140) || (g > 140 && b > 140) ||
                       r > 200 || g > 200 || b > 200;
 
-      // Check for soft color names
-      const hasSoftName = name.includes("cloud") || name.includes("rose") ||
-        name.includes("ballerina") || name.includes("almond") || name.includes("blush") ||
-        name.includes("potpourri") || name.includes("apricot") || name.includes("peach") ||
+      // Check for soft color names - prioritize romantic colors
+      const hasRomanticName = name.includes("rose") || name.includes("blush") ||
+        name.includes("lavender") || name.includes("lilac") || name.includes("pink") ||
+        name.includes("mint") || name.includes("sage") || name.includes("aqua") ||
+        name.includes("periwinkle") || name.includes("violet") || name.includes("mauve");
+
+      const hasSoftName = name.includes("cloud") || name.includes("ballerina") ||
+        name.includes("almond") || name.includes("potpourri") || name.includes("peach") ||
         name.includes("brook") || name.includes("fair") || name.includes("cream") ||
         name.includes("pale") || name.includes("tender") || name.includes("sweet") ||
         name.includes("pastel") || name.includes("barely") || name.includes("serenity") ||
-        name.includes("dusty") || name.includes("mist") || name.includes("lavender") ||
-        name.includes("mint") || name.includes("aqua") || name.includes("lilac") ||
-        name.includes("bellini") || name.includes("butter") || name.includes("ivory") ||
-        name.includes("vanilla") || name.includes("whisper") || name.includes("powder") ||
-        name.includes("ice") || name.includes("frost") || name.includes("petal") ||
-        name.includes("blossom") || name.includes("dew") || name.includes("silk") ||
-        name.includes("soft") || name.includes("gentle") || name.includes("light") ||
-        name.includes("angel") || name.includes("shell") || name.includes("snow") ||
-        name.includes("pink") || name.includes("pearl") || name.includes("opal");
+        name.includes("dusty") || name.includes("mist") || name.includes("bellini") ||
+        name.includes("butter") || name.includes("ivory") || name.includes("vanilla") ||
+        name.includes("whisper") || name.includes("powder") || name.includes("ice") ||
+        name.includes("frost") || name.includes("petal") || name.includes("blossom") ||
+        name.includes("dew") || name.includes("silk") || name.includes("soft") ||
+        name.includes("gentle") || name.includes("light") || name.includes("angel") ||
+        name.includes("shell") || name.includes("snow") || name.includes("pearl") ||
+        name.includes("opal");
+
+      // Prioritize romantic names for romantic themes
+      if (isRomanticTheme && hasRomanticName) return true;
 
       // Use OR logic: must be EITHER light OR have soft name (more permissive)
       return isLight || hasSoftName;
     });
 
     console.log(`✨ Found ${softColors.length} soft colors before shuffleAndSelect`);
-    if (softColors.length < 20) {
-      console.log('⚠️ Sample of soft colors found:', softColors.slice(0, 5).map(c => c.name));
+
+    // For romantic/garden themes, ensure diversity by selecting from different color families
+    const isRomanticTheme = lowerKeywords.includes('romantic') || lowerKeywords.includes('garden') ||
+                            lowerKeywords.includes('ethereal') || lowerKeywords.includes('dreamy');
+
+    if (isRomanticTheme && softColors.length >= count) {
+      // Categorize colors by family
+      const pinks = softColors.filter(c => {
+        const n = c.name.toLowerCase();
+        return n.includes("pink") || n.includes("rose") || n.includes("blush") || n.includes("coral");
+      });
+      const purples = softColors.filter(c => {
+        const n = c.name.toLowerCase();
+        return n.includes("lavender") || n.includes("lilac") || n.includes("violet") ||
+               n.includes("mauve") || n.includes("purple") || n.includes("periwinkle");
+      });
+      const greens = softColors.filter(c => {
+        const n = c.name.toLowerCase();
+        return n.includes("mint") || n.includes("sage") || n.includes("green") ||
+               n.includes("aqua") || n.includes("seafoam");
+      });
+      const blues = softColors.filter(c => {
+        const n = c.name.toLowerCase();
+        return n.includes("blue") || n.includes("sky") || n.includes("azure");
+      });
+      const neutrals = softColors.filter(c => {
+        const n = c.name.toLowerCase();
+        return n.includes("cream") || n.includes("ivory") || n.includes("white") ||
+               n.includes("beige") || n.includes("linen") || n.includes("pearl");
+      });
+
+      // Select 2 from each major family, then fill remainder
+      const diverseSelection = [
+        ...(pinks.length > 0 ? [pinks[Math.floor(Math.random() * pinks.length)]] : []),
+        ...(pinks.length > 1 ? [pinks[Math.floor(Math.random() * pinks.length)]] : []),
+        ...(purples.length > 0 ? [purples[Math.floor(Math.random() * purples.length)]] : []),
+        ...(greens.length > 0 ? [greens[Math.floor(Math.random() * greens.length)]] : []),
+        ...(blues.length > 0 ? [blues[Math.floor(Math.random() * blues.length)]] : []),
+        ...(neutrals.length > 0 ? [neutrals[Math.floor(Math.random() * neutrals.length)]] : []),
+      ];
+
+      // Remove duplicates
+      const uniqueSelection = Array.from(new Map(diverseSelection.map(c => [c.code, c])).values());
+
+      // If we still need more, fill from remaining soft colors
+      if (uniqueSelection.length < count) {
+        const usedCodes = new Set(uniqueSelection.map(c => c.code));
+        const remaining = softColors.filter(c => !usedCodes.has(c.code));
+        const shuffledRemaining = [...remaining].sort(() => Math.random() - 0.5);
+        uniqueSelection.push(...shuffledRemaining.slice(0, count - uniqueSelection.length));
+      }
+
+      console.log(`🌸 Diverse romantic palette: ${uniqueSelection.length} colors`);
+      return uniqueSelection.slice(0, count);
     }
 
     return shuffleAndSelect(softColors, count, true); // Pass true to indicate soft theme
