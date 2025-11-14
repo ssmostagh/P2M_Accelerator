@@ -475,62 +475,7 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
 
     console.log(`✨ Found ${softColors.length} soft colors before shuffleAndSelect`);
 
-    // For romantic/garden themes, ensure diversity by selecting from different color families
-    const isRomanticTheme = lowerKeywords.includes('romantic') || lowerKeywords.includes('garden') ||
-                            lowerKeywords.includes('ethereal') || lowerKeywords.includes('dreamy');
-
-    if (isRomanticTheme && softColors.length >= count) {
-      // Categorize colors by family
-      const pinks = softColors.filter(c => {
-        const n = c.name.toLowerCase();
-        return n.includes("pink") || n.includes("rose") || n.includes("blush") || n.includes("coral");
-      });
-      const purples = softColors.filter(c => {
-        const n = c.name.toLowerCase();
-        return n.includes("lavender") || n.includes("lilac") || n.includes("violet") ||
-               n.includes("mauve") || n.includes("purple") || n.includes("periwinkle");
-      });
-      const greens = softColors.filter(c => {
-        const n = c.name.toLowerCase();
-        return n.includes("mint") || n.includes("sage") || n.includes("green") ||
-               n.includes("aqua") || n.includes("seafoam");
-      });
-      const blues = softColors.filter(c => {
-        const n = c.name.toLowerCase();
-        return n.includes("blue") || n.includes("sky") || n.includes("azure");
-      });
-      const neutrals = softColors.filter(c => {
-        const n = c.name.toLowerCase();
-        return n.includes("cream") || n.includes("ivory") || n.includes("white") ||
-               n.includes("beige") || n.includes("linen") || n.includes("pearl");
-      });
-
-      // Select 2 from each major family, then fill remainder
-      const diverseSelection = [
-        ...(pinks.length > 0 ? [pinks[Math.floor(Math.random() * pinks.length)]] : []),
-        ...(pinks.length > 1 ? [pinks[Math.floor(Math.random() * pinks.length)]] : []),
-        ...(purples.length > 0 ? [purples[Math.floor(Math.random() * purples.length)]] : []),
-        ...(greens.length > 0 ? [greens[Math.floor(Math.random() * greens.length)]] : []),
-        ...(blues.length > 0 ? [blues[Math.floor(Math.random() * blues.length)]] : []),
-        ...(neutrals.length > 0 ? [neutrals[Math.floor(Math.random() * neutrals.length)]] : []),
-      ];
-
-      // Remove duplicates
-      const uniqueSelection = Array.from(new Map(diverseSelection.map(c => [c.code, c])).values());
-
-      // If we still need more, fill from remaining soft colors
-      if (uniqueSelection.length < count) {
-        const usedCodes = new Set(uniqueSelection.map(c => c.code));
-        const remaining = softColors.filter(c => !usedCodes.has(c.code));
-        const shuffledRemaining = [...remaining].sort(() => Math.random() - 0.5);
-        uniqueSelection.push(...shuffledRemaining.slice(0, count - uniqueSelection.length));
-      }
-
-      console.log(`🌸 Diverse romantic palette: ${uniqueSelection.length} colors`);
-      return uniqueSelection.slice(0, count);
-    }
-
-    return shuffleAndSelect(softColors, count, true); // Pass true to indicate soft theme
+    return shuffleAndSelectDiverse(softColors, count, true); // Pass true to indicate soft theme
   }
 
   if (lowerKeywords.includes('summer') || lowerKeywords.includes('bright')) {
@@ -630,6 +575,85 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
 
   // Default: return random colors ensuring good variety
   return getRandomPantoneColors(count);
+}
+
+// Helper to check if two colors are similar (same hue range)
+function areColorsSimilar(color1, color2) {
+  const hex1 = color1.code.toLowerCase();
+  const hex2 = color2.code.toLowerCase();
+
+  const r1 = parseInt(hex1.substring(1, 3), 16);
+  const g1 = parseInt(hex1.substring(3, 5), 16);
+  const b1 = parseInt(hex1.substring(5, 7), 16);
+
+  const r2 = parseInt(hex2.substring(1, 3), 16);
+  const g2 = parseInt(hex2.substring(3, 5), 16);
+  const b2 = parseInt(hex2.substring(5, 7), 16);
+
+  // Check if both are in same hue range (within 30 points)
+  return Math.abs(r1 - r2) < 30 && Math.abs(g1 - g2) < 30 && Math.abs(b1 - b2) < 30;
+}
+
+// Helper to shuffle and select diverse colors (avoids too many similar hues)
+function shuffleAndSelectDiverse(colors, count, isSoftTheme = false) {
+  const shuffled = [...colors].sort(() => Math.random() - 0.5);
+  const selected = [];
+
+  // Select colors while avoiding too many similar ones
+  for (const color of shuffled) {
+    if (selected.length >= count) break;
+
+    // Count how many similar colors are already selected
+    const similarCount = selected.filter(c => areColorsSimilar(c, color)).length;
+
+    // Allow max 2 similar colors in the palette
+    if (similarCount < 2) {
+      selected.push(color);
+    }
+  }
+
+  // If we still need more colors (couldn't find enough diverse ones), relax the constraint
+  if (selected.length < count) {
+    const usedCodes = new Set(selected.map(c => c.code));
+    const remaining = shuffled.filter(c => !usedCodes.has(c.code));
+    selected.push(...remaining.slice(0, count - selected.length));
+  }
+
+  // If still not enough, use fallback logic
+  if (selected.length < count) {
+    const needed = count - selected.length;
+    console.log(`⚠️ Need ${needed} more colors (have ${selected.length}, need ${count})`);
+    const existingCodes = new Set(selected.map(c => c.code));
+
+    let additional;
+    if (isSoftTheme) {
+      const lightColors = PANTONE_COLORS.filter(c => {
+        const name = c.name.toLowerCase();
+        const hex = c.code.toLowerCase();
+        const isDark = name.includes("burgundy") || name.includes("cabernet") ||
+          name.includes("royal purple") || name.includes("deep") || name.includes("dark") ||
+          name.includes("black") || name.includes("navy") || name.includes("chocolate") ||
+          name.includes("espresso") || name.includes("mahogany") || name.includes("noir") ||
+          name.includes("night") || name.includes("raven") || name.includes("shadow");
+        if (isDark) return false;
+        const r = parseInt(hex.substring(1, 3), 16);
+        const g = parseInt(hex.substring(3, 5), 16);
+        const b = parseInt(hex.substring(5, 7), 16);
+        const isLightEnough = (r > 140 && g > 140) || (r > 140 && b > 140) || (g > 140 && b > 140) ||
+                              r > 200 || g > 200 || b > 200;
+        return isLightEnough && !existingCodes.has(c.code);
+      });
+      additional = [...lightColors].sort(() => Math.random() - 0.5).slice(0, needed);
+    } else {
+      additional = getRandomPantoneColors(needed * 2)
+        .filter(c => !existingCodes.has(c.code))
+        .slice(0, needed);
+    }
+    selected.push(...additional);
+  }
+
+  console.log(`✅ Selected ${selected.length} diverse colors`);
+  return selected;
 }
 
 // Helper to shuffle and select colors
