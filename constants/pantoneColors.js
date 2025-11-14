@@ -421,23 +421,29 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
       lowerKeywords.includes('soft') || lowerKeywords.includes('ethereal') ||
       lowerKeywords.includes('dreamy') || lowerKeywords.includes('airy') ||
       lowerKeywords.includes('pastel') || lowerKeywords.includes('delicate')) {
+
+    console.log('🎨 Soft theme detected! Keywords:', lowerKeywords);
+
     const softColors = PANTONE_COLORS.filter(c => {
       const name = c.name.toLowerCase();
       const hex = c.code.toLowerCase();
 
-      // Explicitly exclude dark colors
+      // Explicitly exclude dark colors by name
       const isDarkColor = name.includes("burgundy") || name.includes("cabernet") ||
         name.includes("royal purple") || name.includes("deep") || name.includes("dark") ||
         name.includes("black") || name.includes("navy") || name.includes("chocolate") ||
-        name.includes("espresso") || name.includes("mahogany");
+        name.includes("espresso") || name.includes("mahogany") || name.includes("noir") ||
+        name.includes("night") || name.includes("raven") || name.includes("shadow");
 
       if (isDarkColor) return false;
 
-      // Check if color is light/pastel by hex code (lowered threshold for more colors)
+      // Check if color is light/pastel by hex code - much more permissive now
       const r = parseInt(hex.substring(1, 3), 16);
       const g = parseInt(hex.substring(3, 5), 16);
       const b = parseInt(hex.substring(5, 7), 16);
-      const isLight = r > 170 || g > 170 || b > 170;
+      // At least 2 of the 3 channels should be above 140, OR any single channel above 200
+      const isLight = (r > 140 && g > 140) || (r > 140 && b > 140) || (g > 140 && b > 140) ||
+                      r > 200 || g > 200 || b > 200;
 
       // Check for soft color names
       const hasSoftName = name.includes("cloud") || name.includes("rose") ||
@@ -453,11 +459,18 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
         name.includes("ice") || name.includes("frost") || name.includes("petal") ||
         name.includes("blossom") || name.includes("dew") || name.includes("silk") ||
         name.includes("soft") || name.includes("gentle") || name.includes("light") ||
-        name.includes("angel") || name.includes("shell") || name.includes("snow");
+        name.includes("angel") || name.includes("shell") || name.includes("snow") ||
+        name.includes("pink") || name.includes("pearl") || name.includes("opal");
 
       // Use OR logic: must be EITHER light OR have soft name (more permissive)
       return isLight || hasSoftName;
     });
+
+    console.log(`✨ Found ${softColors.length} soft colors before shuffleAndSelect`);
+    if (softColors.length < 20) {
+      console.log('⚠️ Sample of soft colors found:', softColors.slice(0, 5).map(c => c.name));
+    }
+
     return shuffleAndSelect(softColors, count, true); // Pass true to indicate soft theme
   }
 
@@ -568,6 +581,7 @@ function shuffleAndSelect(colors, count, isSoftTheme = false) {
   // If we don't have enough, fill with appropriate colors
   if (selected.length < count) {
     const needed = count - selected.length;
+    console.log(`⚠️ Need ${needed} more colors (have ${selected.length}, need ${count})`);
     const existingCodes = new Set(selected.map(c => c.code));
 
     let additional;
@@ -581,20 +595,31 @@ function shuffleAndSelect(colors, count, isSoftTheme = false) {
         const isDark = name.includes("burgundy") || name.includes("cabernet") ||
           name.includes("royal purple") || name.includes("deep") || name.includes("dark") ||
           name.includes("black") || name.includes("navy") || name.includes("chocolate") ||
-          name.includes("espresso") || name.includes("mahogany");
+          name.includes("espresso") || name.includes("mahogany") || name.includes("noir") ||
+          name.includes("night") || name.includes("raven") || name.includes("shadow");
 
         if (isDark) return false;
 
-        // Only include if light by hex code
+        // Only include if light by hex code - more permissive
         const r = parseInt(hex.substring(1, 3), 16);
         const g = parseInt(hex.substring(3, 5), 16);
         const b = parseInt(hex.substring(5, 7), 16);
-        return (r > 170 || g > 170 || b > 170) && !existingCodes.has(c.code);
+        // At least 2 channels above 140, OR any channel above 200
+        const isLightEnough = (r > 140 && g > 140) || (r > 140 && b > 140) || (g > 140 && b > 140) ||
+                              r > 200 || g > 200 || b > 200;
+        return isLightEnough && !existingCodes.has(c.code);
       });
+
+      console.log(`💡 Found ${lightColors.length} additional light colors for fallback`);
+      if (lightColors.length < needed) {
+        console.error(`❌ WARNING: Only found ${lightColors.length} light colors, but need ${needed}. May include darker colors.`);
+      }
 
       additional = [...lightColors]
         .sort(() => Math.random() - 0.5)
         .slice(0, needed);
+
+      console.log(`✅ Adding ${additional.length} colors:`, additional.map(c => c.name));
     } else {
       // For other themes, use random colors
       additional = getRandomPantoneColors(needed * 2)
