@@ -5,6 +5,7 @@ import { GoogleGenAI, Modality } from '@google/genai';
 import { Storage } from '@google-cloud/storage';
 import { GoogleAuth } from 'google-auth-library';
 import dotenv from 'dotenv';
+import { PANTONE_COLORS, getRandomPantoneColors, getComplementaryPantoneColors } from './constants/pantoneColors.js';
 
 dotenv.config();
 
@@ -330,6 +331,106 @@ const generateVideoVariations = async (frontImage, count = 3) => {
     return { name: operationName };
 };
 
+// --- Moodboard Functions ---
+const generateColorPalette = async (title, keywords) => {
+    console.log('🎨 Generating color palette from real Pantone colors');
+    console.log(`Theme: ${title}`);
+    console.log(`Keywords: ${keywords}`);
+
+    // Get complementary Pantone colors based on keywords
+    const colors = getComplementaryPantoneColors(keywords, 8);
+
+    // If we didn't get enough colors from keyword matching, fill with random ones
+    if (colors.length < 8) {
+        const needed = 8 - colors.length;
+        const random = getRandomPantoneColors(needed + 10); // Get extra to avoid duplicates
+        const existingCodes = new Set(colors.map(c => c.code));
+
+        for (const color of random) {
+            if (!existingCodes.has(color.code) && colors.length < 8) {
+                colors.push(color);
+                existingCodes.add(color.code);
+            }
+        }
+    }
+
+    console.log(`✅ Selected ${colors.length} real Pantone colors`);
+
+    return { colors: colors.slice(0, 8) };
+};
+
+const generateMoodboardImage = async (prompt, aspectRatio) => {
+    const response = await ai.models.generateImages({
+        model: 'imagen-4.0-generate-001',
+        prompt: prompt,
+        config: {
+            numberOfImages: 1,
+            outputMimeType: 'image/jpeg',
+            aspectRatio: aspectRatio,
+        },
+    });
+
+    if (response.generatedImages && response.generatedImages.length > 0) {
+        const base64ImageBytes = response.generatedImages[0]?.image?.imageBytes;
+        return `data:image/jpeg;base64,${base64ImageBytes}`;
+    } else {
+        throw new Error("No image was generated.");
+    }
+};
+
+const regenerateColor = async (currentColorName, themePrompt) => {
+    console.log('🔄 Regenerating color from real Pantone colors');
+    console.log(`Current color: ${currentColorName}`);
+    console.log(`Theme: ${themePrompt}`);
+
+    // Get a different color from the Pantone database
+    // Filter out the current color
+    const availableColors = PANTONE_COLORS.filter(color => color.name !== currentColorName);
+
+    // If we can extract keywords from the theme prompt, use them
+    // Otherwise, pick a random color
+    let newColor;
+
+    if (themePrompt && themePrompt.length > 10) {
+        // Extract keywords from theme prompt (look for quoted text after "theme" or "keywords")
+        const keywordMatch = themePrompt.match(/keywords[:\s]+['"](.*?)['"]/i);
+        const themeMatch = themePrompt.match(/theme[:\s]+['"](.*?)['"]/i);
+
+        if (keywordMatch || themeMatch) {
+            const keywords = keywordMatch ? keywordMatch[1] : themeMatch[1];
+            console.log(`Using keywords for color selection: ${keywords}`);
+
+            // Get complementary colors and pick one that's different from current
+            const complementaryColors = getComplementaryPantoneColors(keywords, 15)
+                .filter(color => color.name !== currentColorName);
+
+            if (complementaryColors.length > 0) {
+                newColor = complementaryColors[Math.floor(Math.random() * complementaryColors.length)];
+            }
+        }
+    }
+
+    // Fallback to random color if no match found
+    if (!newColor) {
+        newColor = availableColors[Math.floor(Math.random() * availableColors.length)];
+    }
+
+    console.log(`✅ Selected new Pantone color: ${newColor.name}`);
+
+    return newColor;
+};
+
+const rewritePrompt = async (originalPrompt) => {
+    const metaPrompt = `You are a creative assistant for a fashion designer. Rewrite and enhance the following image prompt to generate a more visually compelling and detailed photograph for a fashion moodboard. Keep the core concepts but add artistic details. Return only the new prompt text, without any surrounding quotes or explanations. Prompt to rewrite: "${originalPrompt}"`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: { role: 'user', parts: [{ text: metaPrompt }] },
+    });
+
+    return response.text.trim();
+};
+
 const geminiService = {
     generateInitialImage,
     generateInitialImageVariations,
@@ -337,6 +438,11 @@ const geminiService = {
     generateEditVariations,
     generateVideoVariations,
     generatePrompt,
+    // Moodboard functions
+    generateColorPalette,
+    generateMoodboardImage,
+    regenerateColor,
+    rewritePrompt,
 };
 
 // --- API Endpoint ---

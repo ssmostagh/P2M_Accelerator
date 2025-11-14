@@ -28,3 +28,37 @@ export interface HistoryGroup {
   prompt?: string;
   images: HistoryImage[];
 }
+
+// Moodboard Types
+export interface PanelLayout {
+  id: number;
+  gridClass: string;
+  type: 'image' | 'color';
+  aspectRatio?: '1:1' | '3:4' | '4:3' | '9:16' | '16:9';
+}
+
+export interface ImagePanelData {
+  id: number;
+  type: 'image';
+  prompt: string;
+}
+
+export interface PantoneColor {
+  name: string;
+  code: string; // hex code
+}
+
+export interface ColorPanelData {
+  id: number;
+  type: 'color';
+  color: PantoneColor;
+  prompt: string; // The prompt used to generate the palette
+}
+
+export type PanelData = ImagePanelData | ColorPanelData;
+
+export interface FormState {
+  title: string;
+  keywords: string;
+  audience: string;
+}
