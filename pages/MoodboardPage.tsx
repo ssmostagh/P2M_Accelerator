@@ -47,7 +47,8 @@ export default function MoodboardPage() {
     }
 
     const colorPrompt = `Generate a color palette of 8 complementary colors for a fashion collection with the theme '${title}' and keywords '${keywords}'. For each color, provide: 1) An accurate, real Pantone color code (e.g., "PANTONE 19-4052 TCX" or "PANTONE 16-1546 TPX"), and 2) The corresponding hex code. Use only real, existing Pantone colors from the Pantone Matching System.`;
-    const imageBasePrompt = `A single, professional, high-quality fashion photograph. Theme: '${title}'. Keywords: ${keywords}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Unless explicitly specified, do NOT include people or models in the image. Focus on objects, details, scenery, or textures. Audience: ${audience}.`;
+    const figureBasePrompt = `A single, professional, high-quality fashion photograph. Theme: '${title}'. Keywords: ${keywords}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Audience: ${audience}.`;
+    const nonFigureBasePrompt = `A single, professional, high-quality photograph. Theme: '${title}'. Keywords: ${keywords}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Do NOT include people or models in the image. Focus on the subject matter. Audience: ${audience}.`;
 
     try {
       // Call backend API for color generation
@@ -103,11 +104,11 @@ export default function MoodboardPage() {
           };
         } else { // type is 'image'
           const modifier = finalPrompts[imagePromptIndex++];
-          // If this is a figure prompt, append audience constraints
-          const isFigurePrompt = FIGURE_PROMPTS.some(fp => modifier.includes(fp));
+          // If this is a figure prompt, use figureBasePrompt and append audience constraints
+          const isFigurePrompt = FIGURE_PROMPTS.includes(modifier);
           const fullPrompt = isFigurePrompt
-            ? `${imageBasePrompt} ${modifier} IMPORTANT: ${audienceConstraint}`
-            : `${imageBasePrompt} ${modifier}`;
+            ? `${figureBasePrompt} ${modifier} IMPORTANT: ${audienceConstraint}`
+            : `${nonFigureBasePrompt} ${modifier}`;
 
           return {
             id: layout.id,
@@ -168,31 +169,6 @@ export default function MoodboardPage() {
   return (
     <div className="flex flex-col h-full bg-base-900 text-base-200">
       <main className="flex-1 p-4 sm:p-6 lg:p-8 min-h-0 overflow-hidden relative">
-        {/* Export Button */}
-        {panels.length > 0 && (
-          <button
-            onClick={handleExportMoodboard}
-            disabled={isExporting}
-            className="absolute top-8 right-8 z-30 flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isExporting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Exporting...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                Export as PNG
-              </>
-            )}
-          </button>
-        )}
-
         <div ref={moodboardRef} className="h-full w-full overflow-auto">
           <MoodboardGrid
             panels={panels}
@@ -209,6 +185,9 @@ export default function MoodboardPage() {
           setFormState={setFormState}
           onSubmit={handleGenerate}
           isGenerating={isGenerating}
+          showExportButton={panels.length > 0}
+          onExport={handleExportMoodboard}
+          isExporting={isExporting}
         />
       </div>
     </div>

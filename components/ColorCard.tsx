@@ -16,6 +16,25 @@ export function ColorCard({ panelData, layout }: ColorCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Parse Pantone name to extract code and friendly name
+  // Format: "PANTONE 17-1563 TCX Hot Coral" -> code: "PANTONE 17-1563 TCX", name: "Hot Coral"
+  const parsePantoneName = (fullName: string): { code: string; displayName: string } => {
+    const parts = fullName.split(' TCX ');
+    if (parts.length === 2) {
+      return {
+        code: parts[0] + ' TCX',
+        displayName: parts[1]
+      };
+    }
+    // Fallback if format is different
+    return {
+      code: fullName,
+      displayName: fullName
+    };
+  };
+
+  const { code: pantoneCode, displayName } = parsePantoneName(currentColor.name);
+
   const handleRegenerate = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsLoading(true);
@@ -78,10 +97,10 @@ export function ColorCard({ panelData, layout }: ColorCardProps) {
       </div>
       <div className="relative z-0 text-left">
         <p className="font-semibold text-white text-xs leading-tight truncate" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
-          {currentColor.name}
+          {displayName}
         </p>
-        <p className="font-mono text-[10px] text-gray-200 leading-tight" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
-          {currentColor.code}
+        <p className="font-mono text-[10px] text-gray-200 leading-tight truncate" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
+          {pantoneCode}
         </p>
       </div>
     </div>

@@ -76,7 +76,9 @@ export function parseAudienceConstraints(audience: string): { gender: string; ag
 
   // Gender detection
   let gender = 'diverse'; // default
-  if (lower.includes('men') && !lower.includes('women')) {
+  if (lower.includes('unisex') || lower.includes('non-binary') || lower.includes('gender-neutral') || lower.includes('androgynous')) {
+    gender = 'gender-diverse';
+  } else if (lower.includes('men') && !lower.includes('women')) {
     gender = 'male';
   } else if (lower.includes('women') && !lower.includes('men')) {
     gender = 'female';
@@ -84,8 +86,6 @@ export function parseAudienceConstraints(audience: string): { gender: string; ag
     gender = 'male';
   } else if (lower.includes('female') && !lower.includes('male')) {
     gender = 'female';
-  } else if (lower.includes('unisex') || lower.includes('non-binary') || lower.includes('gender-neutral')) {
-    gender = 'gender-diverse';
   }
 
   // Age detection
@@ -119,9 +119,9 @@ export function getAudienceFigureConstraint(audience: string): string {
   } else if (gender === 'female') {
     constraint += 'Feature female models only. ';
   } else if (gender === 'gender-diverse') {
-    constraint += 'Feature models of all gender presentations. ';
+    constraint += 'Feature models of all gender presentations, including androgynous and non-binary individuals. ';
   } else {
-    constraint += 'Feature diverse models across gender presentation. ';
+    constraint += 'Feature a balanced mix of male and female models with diverse gender presentations. Do not default to only male or only female models. ';
   }
 
   // Age constraint

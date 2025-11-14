@@ -76,22 +76,20 @@ export function ImageCard({ panelData, layout, collectionTitle, collectionKeywor
   };
 
   const generatePromptForType = (type: string): string => {
-    const basePrompt = `A single, professional, high-quality fashion photograph. Theme: '${collectionTitle || 'Fashion Collection'}'. Keywords: ${collectionKeywords || 'stylish, modern'}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Audience: ${collectionAudience || 'Fashion enthusiasts'}.`;
+    const figureBasePrompt = `A single, professional, high-quality fashion photograph. Theme: '${collectionTitle || 'Fashion Collection'}'. Keywords: ${collectionKeywords || 'stylish, modern'}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Audience: ${collectionAudience || 'Fashion enthusiasts'}.`;
+    const nonFigureBasePrompt = `A single, professional, high-quality photograph. Theme: '${collectionTitle || 'Fashion Collection'}'. Keywords: ${collectionKeywords || 'stylish, modern'}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Do NOT include people or models in the image. Focus on the subject matter. Audience: ${collectionAudience || 'Fashion enthusiasts'}.`;
 
     switch (type) {
       case 'object':
-        return `${basePrompt} Focus on: A single fashion object or accessory (e.g., handbag, shoes, jewelry, belt, hat, sunglasses). Shot in editorial style with dramatic lighting against a clean background.`;
+        return `${nonFigureBasePrompt} Focus on: A single fashion object or accessory (e.g., handbag, shoes, jewelry, belt, hat, sunglasses). Shot in editorial style with dramatic lighting against a clean background.`;
       case 'fabric':
-        return `${basePrompt} Focus on: A close-up texture shot of fabric, material, or finishing detail. Show the weave, pattern, or surface quality. Macro photography style emphasizing material properties.`;
+        return `${nonFigureBasePrompt} Focus on: A close-up texture shot of fabric, material, or finishing detail. Show the weave, pattern, or surface quality. Macro photography style emphasizing material properties.`;
       case 'scenery':
-        return `${basePrompt} Focus on: An environmental scene or location that captures the mood and aesthetic. No people. Atmospheric shot of a place, architecture, or landscape that evokes the collection's vibe.`;
+        return `${nonFigureBasePrompt} Focus on: An environmental scene or location that captures the mood and aesthetic. No people. Atmospheric shot of a place, architecture, or landscape that evokes the collection's vibe.`;
       case 'figure':
-        const audienceConstraint = collectionAudience
-          ? getAudienceFigureConstraint(collectionAudience)
-          : 'Ensure diverse representation across ethnicity, age, body type, and gender presentation.';
-        return `${basePrompt} Focus on: A fashion model or figure showcasing the style. Full body or artistic cropped shot. Emphasize pose, silhouette, and attitude that matches the collection's aesthetic. IMPORTANT: ${audienceConstraint}`;
+        return `${figureBasePrompt} Focus on: A fashion model or figure showcasing the style. Full body or artistic cropped shot. Emphasize pose, silhouette, and attitude that matches the collection's aesthetic.`;
       case 'texture':
-        return `${basePrompt} Focus on: Extreme close-up of surface texture, pattern, or material detail. Abstract and artistic, emphasizing tactile qualities and visual interest.`;
+        return `${nonFigureBasePrompt} Focus on: Extreme close-up of surface texture, pattern, or material detail. Abstract and artistic, emphasizing tactile qualities and visual interest.`;
       default:
         return panelData.prompt;
     }
@@ -241,7 +239,7 @@ export function ImageCard({ panelData, layout, collectionTitle, collectionKeywor
                 onClick={() => handleSelectType('fabric')}
                 className="px-4 py-3 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white"
               >
-                Fabric/Material
+                Material
               </button>
               <button
                 onClick={() => handleSelectType('scenery')}
