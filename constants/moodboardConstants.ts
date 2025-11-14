@@ -35,6 +35,10 @@ export const FIGURE_PROMPTS: string[] = [
   'A single person participating in an activity related to the theme, candid photography style.',
   'A fashion model showcasing the collection with confidence and attitude, editorial photography style.',
   'A model wearing the collection, emphasizing fashion representation, professional studio lighting.',
+  'A fashion illustration of a single figure wearing the collection, drawn in a sophisticated editorial style with clean lines.',
+  'A watercolor fashion sketch of a single person showcasing the collection, artistic and elegant.',
+  'A minimalist line drawing illustration of a fashion figure in the collection, modern and stylized.',
+  'A digital fashion illustration of a single model, contemporary art style with bold colors and graphic elements.',
 ];
 
 export const OBJECT_PROMPTS: string[] = [

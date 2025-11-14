@@ -416,6 +416,51 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
     return shuffleAndSelect(springColors, count);
   }
 
+  if (lowerKeywords.includes('boho') || lowerKeywords.includes('bohemian') ||
+      lowerKeywords.includes('romantic') || lowerKeywords.includes('garden') ||
+      lowerKeywords.includes('soft') || lowerKeywords.includes('ethereal') ||
+      lowerKeywords.includes('dreamy') || lowerKeywords.includes('airy') ||
+      lowerKeywords.includes('pastel') || lowerKeywords.includes('delicate')) {
+    const softColors = PANTONE_COLORS.filter(c => {
+      const name = c.name.toLowerCase();
+      const hex = c.code.toLowerCase();
+
+      // Explicitly exclude dark colors
+      const isDarkColor = name.includes("burgundy") || name.includes("cabernet") ||
+        name.includes("royal purple") || name.includes("deep") || name.includes("dark") ||
+        name.includes("black") || name.includes("navy") || name.includes("chocolate") ||
+        name.includes("espresso") || name.includes("mahogany");
+
+      if (isDarkColor) return false;
+
+      // Check if color is light/pastel by hex code (lowered threshold for more colors)
+      const r = parseInt(hex.substring(1, 3), 16);
+      const g = parseInt(hex.substring(3, 5), 16);
+      const b = parseInt(hex.substring(5, 7), 16);
+      const isLight = r > 170 || g > 170 || b > 170;
+
+      // Check for soft color names
+      const hasSoftName = name.includes("cloud") || name.includes("rose") ||
+        name.includes("ballerina") || name.includes("almond") || name.includes("blush") ||
+        name.includes("potpourri") || name.includes("apricot") || name.includes("peach") ||
+        name.includes("brook") || name.includes("fair") || name.includes("cream") ||
+        name.includes("pale") || name.includes("tender") || name.includes("sweet") ||
+        name.includes("pastel") || name.includes("barely") || name.includes("serenity") ||
+        name.includes("dusty") || name.includes("mist") || name.includes("lavender") ||
+        name.includes("mint") || name.includes("aqua") || name.includes("lilac") ||
+        name.includes("bellini") || name.includes("butter") || name.includes("ivory") ||
+        name.includes("vanilla") || name.includes("whisper") || name.includes("powder") ||
+        name.includes("ice") || name.includes("frost") || name.includes("petal") ||
+        name.includes("blossom") || name.includes("dew") || name.includes("silk") ||
+        name.includes("soft") || name.includes("gentle") || name.includes("light") ||
+        name.includes("angel") || name.includes("shell") || name.includes("snow");
+
+      // Use OR logic: must be EITHER light OR have soft name (more permissive)
+      return isLight || hasSoftName;
+    });
+    return shuffleAndSelect(softColors, count, true); // Pass true to indicate soft theme
+  }
+
   if (lowerKeywords.includes('summer') || lowerKeywords.includes('bright')) {
     const summerColors = PANTONE_COLORS.filter(c =>
       c.name.includes("Turquoise") || c.name.includes("Coral Reef") ||
@@ -516,17 +561,47 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
 }
 
 // Helper to shuffle and select colors
-function shuffleAndSelect(colors, count) {
+function shuffleAndSelect(colors, count, isSoftTheme = false) {
   const shuffled = [...colors].sort(() => Math.random() - 0.5);
   const selected = shuffled.slice(0, count);
 
-  // If we don't have enough, fill with random colors
+  // If we don't have enough, fill with appropriate colors
   if (selected.length < count) {
     const needed = count - selected.length;
     const existingCodes = new Set(selected.map(c => c.code));
-    const additional = getRandomPantoneColors(needed * 2)
-      .filter(c => !existingCodes.has(c.code))
-      .slice(0, needed);
+
+    let additional;
+    if (isSoftTheme) {
+      // For soft themes, only fill with light colors, never dark ones
+      const lightColors = PANTONE_COLORS.filter(c => {
+        const name = c.name.toLowerCase();
+        const hex = c.code.toLowerCase();
+
+        // Exclude dark colors
+        const isDark = name.includes("burgundy") || name.includes("cabernet") ||
+          name.includes("royal purple") || name.includes("deep") || name.includes("dark") ||
+          name.includes("black") || name.includes("navy") || name.includes("chocolate") ||
+          name.includes("espresso") || name.includes("mahogany");
+
+        if (isDark) return false;
+
+        // Only include if light by hex code
+        const r = parseInt(hex.substring(1, 3), 16);
+        const g = parseInt(hex.substring(3, 5), 16);
+        const b = parseInt(hex.substring(5, 7), 16);
+        return (r > 170 || g > 170 || b > 170) && !existingCodes.has(c.code);
+      });
+
+      additional = [...lightColors]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, needed);
+    } else {
+      // For other themes, use random colors
+      additional = getRandomPantoneColors(needed * 2)
+        .filter(c => !existingCodes.has(c.code))
+        .slice(0, needed);
+    }
+
     selected.push(...additional);
   }
 

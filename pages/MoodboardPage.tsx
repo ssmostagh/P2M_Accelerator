@@ -45,7 +45,30 @@ export default function MoodboardPage() {
         return;
     }
 
-    const colorPrompt = `Generate a color palette of 8 complementary colors for a fashion collection with the theme '${title}' and keywords '${keywords}'. For each color, provide: 1) An accurate, real Pantone color code (e.g., "PANTONE 19-4052 TCX" or "PANTONE 16-1546 TPX"), and 2) The corresponding hex code. Use only real, existing Pantone colors from the Pantone Matching System.`;
+    const colorPrompt = `Generate a cohesive color palette of 8 colors for a fashion collection with the theme '${title}' and keywords '${keywords}'.
+
+CRITICAL - MATCH THE THEME'S COLOR INTENSITY:
+Carefully analyze the theme and keywords to determine the appropriate color saturation and tone:
+
+IF the theme includes words like: boho, romantic, garden, airy, soft, ethereal, dreamy, coastal, pastel, gentle, delicate, spring, summer
+→ USE ONLY light, desaturated, soft colors with LOW saturation (pastel pinks, sage greens, soft blues, ivory, cream, pale lavender, dusty rose, light terracotta)
+→ AVOID bold, saturated, or deep colors entirely
+
+IF the theme includes words like: dark academia, gothic, moody, noir, dramatic, mysterious, autumn, winter
+→ USE deep, rich, dark tones with high saturation (burgundy, forest green, navy, charcoal, deep brown, maroon, midnight blue)
+
+IF the theme includes words like: urban, street, contemporary, modern, edgy, industrial
+→ USE muted neutrals or bold primary colors (grays, blacks, whites, bold red, electric blue)
+
+IF the theme includes words like: minimalist, scandinavian, clean, simple, refined
+→ USE mostly neutrals (whites, beiges, grays, black) with one subtle accent
+
+IF the theme includes words like: vibrant, maximalist, bold, colorful, eclectic, tropical
+→ USE bold, saturated, high-energy colors (bright orange, hot pink, electric blue, sunny yellow)
+
+The palette MUST authentically reflect the collection's aesthetic and color intensity. Do NOT use saturated colors for soft/romantic/boho themes.
+
+For each color, provide: 1) An accurate, real Pantone color code (e.g., "PANTONE 19-4052 TCX" or "PANTONE 16-1546 TPX"), and 2) The corresponding hex code. Use only real, existing Pantone colors from the Pantone Matching System.`;
     const figureBasePrompt = `A single, professional, high-quality fashion photograph. Theme: '${title}'. Keywords: ${keywords}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Audience: ${audience}.`;
     const nonFigureBasePrompt = `A single, professional, high-quality photograph. Theme: '${title}'. Keywords: ${keywords}. IMPORTANT: Show only ONE subject or scene. Do NOT create a grid, collage, or multiple images. Do NOT include text or labels. Do NOT include people or models in the image. Focus on the subject matter. Audience: ${audience}.`;
 

@@ -230,33 +230,39 @@ export function ImageCard({ panelData, layout, collectionTitle, collectionKeywor
             <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
               <button
                 onClick={() => handleSelectType('object')}
-                className="px-4 py-3 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                className="px-2 py-2 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white text-center"
               >
                 Object
               </button>
               <button
                 onClick={() => handleSelectType('fabric')}
-                className="px-4 py-3 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                className="px-2 py-2 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white text-center"
               >
                 Material
               </button>
               <button
                 onClick={() => handleSelectType('scenery')}
-                className="px-4 py-3 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                className="px-2 py-2 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white text-center"
               >
                 Scenery
               </button>
               <button
                 onClick={() => handleSelectType('figure')}
-                className="px-4 py-3 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                className="px-2 py-2 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white text-center"
               >
                 Figure
               </button>
               <button
                 onClick={() => handleSelectType('texture')}
-                className="px-4 py-3 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white col-span-2"
+                className="px-2 py-2 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white text-center"
               >
-                Texture/Detail
+                Texture
+              </button>
+              <button
+                onClick={() => handleSelectType('illustration')}
+                className="px-2 py-2 bg-brand-primary/80 hover:bg-brand-primary text-white rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white text-center"
+              >
+                Illustration
               </button>
             </div>
             <button
