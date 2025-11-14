@@ -38,5 +38,10 @@ export function useGeminiImage() {
     }
   }, []);
 
-  return { imageUrl, isLoading, error, generate };
+  const setDirectImageUrl = useCallback((url: string) => {
+    setImageUrl(url);
+    setError(null);
+  }, []);
+
+  return { imageUrl, isLoading, error, generate, setDirectImageUrl };
 }

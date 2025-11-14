@@ -22,7 +22,7 @@ interface ImageCardProps {
 }
 
 export function ImageCard({ panelData, layout, collectionTitle, collectionKeywords, collectionAudience }: ImageCardProps) {
-  const { imageUrl, isLoading, error, generate } = useGeminiImage();
+  const { imageUrl, isLoading, error, generate, setDirectImageUrl } = useGeminiImage();
   const [isEditing, setIsEditing] = useState(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -114,10 +114,8 @@ export function ImageCard({ panelData, layout, collectionTitle, collectionKeywor
   };
 
   const handleSelectFromHistory = (historyItem: ImageHistoryItem) => {
-    // Regenerate using the history URL directly
-    if (layout.aspectRatio) {
-      generate(historyItem.prompt || panelData.prompt, layout.aspectRatio);
-    }
+    // Use the stored URL directly without regenerating
+    setDirectImageUrl(historyItem.url);
     setShowHistory(false);
   };
 
