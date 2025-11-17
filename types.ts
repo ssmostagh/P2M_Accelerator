@@ -62,3 +62,16 @@ export interface FormState {
   keywords: string;
   audience: string;
 }
+
+// Tech Pack Types
+export interface TechPackUploadedImage {
+  file: File;
+  dataUrl: string;
+}
+
+export interface TechPackGeneratedImages {
+  renderingFront: string;
+  renderingBack: string;
+  flatFront: string;
+  flatBack: string;
+}

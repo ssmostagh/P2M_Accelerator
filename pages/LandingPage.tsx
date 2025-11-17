@@ -82,32 +82,38 @@ export default function LandingPage() {
             </div>
           </Link>
 
-          {/* Tech Pack */}
-          <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 opacity-60 relative">
-            <div className="absolute top-3 right-3 bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded">
-              Coming Soon
-            </div>
+          {/* Tech Illustration */}
+          <Link
+            to="/techpack"
+            className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-teal-500 transition-all duration-300 hover:shadow-xl hover:shadow-teal-500/20 group"
+          >
             <div className="mb-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-green-500 rounded-lg flex items-center justify-center mb-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-green-500 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-white mb-2">
-                Technical Illustrations Generator
+              <h2 className="text-xl font-bold text-white mb-2 group-hover:text-teal-400 transition-colors">
+                Tech Illustration Assistant
               </h2>
               <p className="text-gray-400 mb-3 text-sm">
-                Generate technical illustrations for manufacturing.
+                Transform fashion sketches into professional renderings and technical flat illustrations for manufacturing.
               </p>
               <ul className="text-xs text-gray-500 space-y-1">
-                <li>• Upload design sketches</li>
-                <li>• AI-generated technical flat sketches</li>
-                <li>• Detailed construction views</li>
-                <li>• Professional illustration output</li>
-                <li>• Export illustrations to PDF</li>
+                <li>• Upload fashion design sketches</li>
+                <li>• AI-generated photorealistic renderings</li>
+                <li>• Technical flat illustrations (front & back)</li>
+                <li>• Production-ready line drawings</li>
+                <li>• Download all assets instantly</li>
               </ul>
             </div>
-          </div>
+            <div className="mt-4 text-teal-400 font-semibold group-hover:translate-x-2 transition-transform inline-flex items-center text-sm">
+              Generate Assets
+              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
         </div>
 
         {/* Feature Highlights */}

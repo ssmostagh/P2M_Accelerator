@@ -34,6 +34,26 @@ export const generatePrompt = async (garmentImage: File): Promise<string> => {
   return result;
 };
 
+export const analyzeTechPackSketch = async (sketchDataUrl: string): Promise<string> => {
+  const sketchPart = dataUrlToGenerativePart(sketchDataUrl);
+
+  const response = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ func: 'analyzeTechPackSketch', args: [sketchPart] }),
+  });
+
+  if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to analyze tech pack sketch.');
+  }
+
+  const result = await response.json();
+  return result;
+};
+
 // Helper to convert a base64 data URL to a generative part
 const dataUrlToGenerativePart = (dataUrl: string) => {
     const [header, data] = dataUrl.split(',');

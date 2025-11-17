@@ -113,6 +113,40 @@ Provide a comprehensive description that would help recreate this garment accura
     return response.text;
 };
 
+const analyzeTechPackSketch = async (sketchImagePart) => {
+    console.log('========================================');
+    console.log('🔍 ANALYZING TECH ILLUSTRATION SKETCH');
+    console.log('========================================');
+
+    const model = textVisionModel;
+    const prompt = `Analyze this fashion design sketch and provide a detailed technical description including:
+- Type of garment (e.g., t-shirt, dress, jacket, pants, skirt)
+- Silhouette and overall shape
+- Style and fit (e.g., casual, formal, slim-fit, oversized, relaxed)
+- Key construction details (darts, pleats, gathers, yokes)
+- Neckline/collar type and details
+- Sleeve style, length, and construction
+- Closure type and placement (buttons, zippers, ties, etc.)
+- Pockets: type, number, placement, and style
+- Hemline and finishing details
+- Seam lines and topstitching visible in the sketch
+- Any decorative elements or embellishments
+- Proportions and design lines
+- Overall aesthetic and fashion category
+
+Provide a comprehensive technical description that would help generate accurate photorealistic renderings and technical flat drawings for production.`;
+
+    console.log('📤 Sending sketch to Gemini 2.5 Pro for analysis...');
+    const response = await ai.models.generateContent({
+        model: model,
+        contents: { role: 'user', parts: [ { text: prompt }, sketchImagePart ] },
+    });
+
+    console.log('✅ Sketch analysis complete');
+    console.log('📝 Description:', response.text);
+    return response.text;
+};
+
 const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) => {
   console.log('========================================');
   console.log('🎨 GENERATING INITIAL IMAGE');
@@ -473,6 +507,130 @@ const rewritePrompt = async (originalPrompt) => {
     return response.text.trim();
 };
 
+// Tech Illustration Assistant Functions
+const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, frontDescription = null, backDescription = null) => {
+    try {
+        console.log('========================================');
+        console.log('🎨 GENERATING TECH ILLUSTRATION ASSETS');
+        console.log('========================================');
+        console.log('Front includes back:', frontIncludesBack);
+        console.log('Separate back image provided:', !!backImageDataUrl);
+        console.log('Front description available:', !!frontDescription);
+        console.log('Back description available:', !!backDescription);
+
+        const model = imageEditingModel; // Use the same model as other image operations
+        console.log('Using model:', model);
+
+        // Convert data URLs to image parts
+        let frontImagePart, backImagePart;
+        try {
+            frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
+            console.log('✅ Front image converted successfully');
+            backImagePart = backImageDataUrl ? dataUrlToGenerativePart(backImageDataUrl) : null;
+            if (backImageDataUrl) {
+                console.log('✅ Back image converted successfully');
+            }
+        } catch (error) {
+            console.error('❌ Error converting images to parts:', error);
+            throw new Error(`Failed to process uploaded images: ${error.message}`);
+        }
+
+        // Build garment context from descriptions
+        const frontContext = frontDescription
+            ? `\n\nDETAILED GARMENT ANALYSIS (Front View):\n${frontDescription}\n\nUse this analysis to ensure accuracy in the generated output.`
+            : '';
+
+        const backContext = backDescription
+            ? `\n\nDETAILED GARMENT ANALYSIS (Back View):\n${backDescription}\n\nUse this analysis to ensure accuracy in the generated output.`
+            : frontContext; // Use front context if back description not available
+
+        const commonRenderingSuffix = "The garment should be displayed on a neutral, ghost mannequin against a clean, light gray studio background. Focus on realistic fabric texture, drape, and professional lighting. Do not include any text or watermarks.";
+        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only";
+
+        const renderingFrontPromptText = frontIncludesBack
+            ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the FRONT VIEW. Ignore the back view entirely. Generate a photorealistic, professional rendering of ONLY the front view. ${commonRenderingSuffix}${frontContext}`
+            : `From this fashion sketch of a garment's front, generate a photorealistic, professional rendering. ${commonRenderingSuffix}${frontContext}`;
+
+        const flatFrontPromptText = frontIncludesBack
+            ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the FRONT VIEW. Ignore the back view entirely. Create a technical flat illustration of ONLY the front view. ${commonFlatSuffix}${frontContext}`
+            : `From this fashion design image of a garment's front, create a technical flat illustration of the front view. ${commonFlatSuffix}${frontContext}`;
+
+        const renderingBackPromptText = backImagePart
+            ? `From this fashion sketch of a garment's back, generate a photorealistic, professional rendering. ${commonRenderingSuffix}${backContext}`
+            : frontIncludesBack
+                ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the BACK VIEW. Ignore the front view entirely. Generate a photorealistic, professional rendering of ONLY the back view. ${commonRenderingSuffix}${backContext}`
+                : `Based on the provided front view of the garment, infer and generate a photorealistic, professional rendering of the BACK VIEW. ${commonRenderingSuffix}${backContext}`;
+
+        const flatBackPromptText = backImagePart
+            ? `From this fashion design image of a garment's back, create a technical flat illustration of the back view. ${commonFlatSuffix}${backContext}`
+            : frontIncludesBack
+                ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the BACK VIEW. Ignore the front view entirely. Create a technical flat illustration of ONLY the back view. ${commonFlatSuffix}${backContext}`
+                : `Based on the provided front view of the garment, infer and create a technical flat illustration of the BACK VIEW. ${commonFlatSuffix}${backContext}`;
+
+        const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
+        const imagePartForBackPrompts = backImagePart ?? frontImagePart;
+
+        console.log('📸 Starting parallel generation of 4 images...');
+        console.log('   - Rendering Front');
+        console.log('   - Technical Flat Front');
+        console.log('   - Rendering Back');
+        console.log('   - Technical Flat Back');
+
+        let renderingFrontResult, flatFrontResult, renderingBackResult, flatBackResult;
+        try {
+            [renderingFrontResult, flatFrontResult, renderingBackResult, flatBackResult] = await Promise.all([
+                ai.models.generateContent({ model, contents: { role: 'user', parts: [frontImagePart, { text: renderingFrontPromptText }] }, config: commonConfig }),
+                ai.models.generateContent({ model, contents: { role: 'user', parts: [frontImagePart, { text: flatFrontPromptText }] }, config: commonConfig }),
+                ai.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingBackPromptText }] }, config: commonConfig }),
+                ai.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: flatBackPromptText }] }, config: commonConfig })
+            ]);
+            console.log('✅ All API calls completed successfully');
+        } catch (error) {
+            console.error('❌ Error during image generation API calls:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
+            throw new Error(`AI generation failed: ${error.message}`);
+        }
+
+        console.log('🔄 Processing API responses...');
+        let renderingFront, flatFront, renderingBack, flatBack;
+        try {
+            renderingFront = processApiResponse(renderingFrontResult);
+            console.log('✅ Rendering Front processed');
+            flatFront = processApiResponse(flatFrontResult);
+            console.log('✅ Technical Flat Front processed');
+            renderingBack = processApiResponse(renderingBackResult);
+            console.log('✅ Rendering Back processed');
+            flatBack = processApiResponse(flatBackResult);
+            console.log('✅ Technical Flat Back processed');
+        } catch (error) {
+            console.error('❌ Error processing API responses:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack
+            });
+            throw new Error(`Failed to process generated images: ${error.message}`);
+        }
+
+        console.log('========================================');
+        console.log('✅ TECH PACK GENERATION COMPLETE');
+        console.log('========================================');
+
+        return { renderingFront, renderingBack, flatFront, flatBack };
+    } catch (error) {
+        console.error('========================================');
+        console.error('❌ TECH PACK GENERATION FAILED');
+        console.error('========================================');
+        console.error('Error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        throw error;
+    }
+};
+
 const geminiService = {
     generateInitialImage,
     generateInitialImageVariations,
@@ -485,6 +643,9 @@ const geminiService = {
     generateMoodboardImage,
     regenerateColor,
     rewritePrompt,
+    // Tech Illustration functions
+    analyzeTechPackSketch,
+    generateTechPackAssets,
 };
 
 // --- API Endpoint ---
