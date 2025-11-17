@@ -1,10 +1,10 @@
-# P2M Accelerator: Ultra-Fast Production Design Studio
+# P2M Accelerator: Micro-Trend Studio
 
 A powerful web application for virtual garment try-on, fashion design, and AI-powered moodboard creation, powered by Google's Gemini AI. This tool allows users to visualize garments on models, apply fabric changes, generate front and back views, create dynamic catwalk videos, and generate themed color palettes with image prompts for design inspiration.
 
 ## Features
 
-### UFP Design Studio
+### Micro-Trend Studio
 
 - **Virtual Try-On**: Seamlessly place garments on model images with realistic rendering
 - **AI-Powered Design**: Generate multiple variations of designs using Gemini 2.5 Flash
@@ -176,7 +176,7 @@ UFP/
 │   └── VideoPlayerModal.tsx
 ├── pages/               # Page components
 │   ├── LandingPage.tsx  # Home page with navigation
-│   ├── UFPDesignStudio.tsx  # Main UFP application
+│   ├── UFPDesignStudio.tsx  # Main Micro-Trend Studio application
 │   └── MoodboardPage.tsx    # Moodboard AI interface
 ├── services/            # API service layer
 │   └── geminiService.ts
@@ -197,7 +197,7 @@ UFP/
 
 ## Usage
 
-### UFP Design Studio
+### Micro-Trend Studio
 
 1. **Upload Images**: Upload a model image and a garment image
 2. **Generate Initial Design**: Click "Generate Design" to create virtual try-on variations

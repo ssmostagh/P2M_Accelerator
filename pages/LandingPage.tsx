@@ -16,7 +16,7 @@ export default function LandingPage() {
 
         {/* Tools Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          {/* UFP Design Studio */}
+          {/* Micro-Trend Studio */}
           <Link
             to="/ufp"
             className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-purple-500 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20 group"
@@ -28,7 +28,7 @@ export default function LandingPage() {
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
-                Ultra Fast Production Studio (UFP)
+                Micro-Trend Studio
               </h2>
               <p className="text-gray-400 mb-3 text-sm">
                 Virtual try-on with fabric swapping, edit garment's front and back views, and video preview capabilities.

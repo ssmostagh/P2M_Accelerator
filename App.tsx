@@ -43,7 +43,7 @@ const App: React.FC = () => {
                     }`
                   }
                 >
-                  Ultra Fast Production Studio
+                  Micro-Trend Studio
                 </NavLink>
                 <NavLink
                   to="/moodboard"

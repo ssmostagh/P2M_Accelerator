@@ -120,21 +120,41 @@ const analyzeTechPackSketch = async (sketchImagePart) => {
 
     const model = textVisionModel;
     const prompt = `Analyze this fashion design sketch and provide a detailed technical description including:
+
+GARMENT IDENTIFICATION:
 - Type of garment (e.g., t-shirt, dress, jacket, pants, skirt)
-- Silhouette and overall shape
-- Style and fit (e.g., casual, formal, slim-fit, oversized, relaxed)
-- Key construction details (darts, pleats, gathers, yokes)
-- Neckline/collar type and details
-- Sleeve style, length, and construction
-- Closure type and placement (buttons, zippers, ties, etc.)
-- Pockets: type, number, placement, and style
-- Hemline and finishing details
-- Seam lines and topstitching visible in the sketch
-- Any decorative elements or embellishments
-- Proportions and design lines
 - Overall aesthetic and fashion category
 
-Provide a comprehensive technical description that would help generate accurate photorealistic renderings and technical flat drawings for production.`;
+PROPORTIONS AND MEASUREMENTS (CRITICAL - be specific):
+- Overall garment length (where it falls on the body: above knee, knee-length, midi, floor-length, etc.)
+- Body width at bust/chest, waist, and hips (fitted, loose, oversized)
+- Shoulder width and slope
+- Armhole depth and placement
+- Sleeve length (sleeveless, cap, short, 3/4, long)
+- Sleeve width (fitted, regular, wide, balloon, etc.)
+- Waistline placement (natural waist, dropped waist, empire, etc.)
+- Hemline shape and curve (straight, curved, asymmetric, tiered)
+
+SILHOUETTE AND FIT:
+- Overall silhouette (A-line, fitted, shift, mermaid, etc.)
+- Fit type (body-hugging, relaxed, oversized, tailored)
+- How the garment drapes or stands away from the body
+
+CONSTRUCTION DETAILS:
+- Neckline/collar type and exact shape
+- Closure type, placement, and number (buttons, zippers, ties, lacing)
+- Seam lines and their exact placement
+- Darts, pleats, gathers, or tucks (location and direction)
+- Yokes, panels, or color blocking
+- Topstitching and decorative stitching
+
+DESIGN ELEMENTS:
+- Pockets: type, number, exact placement, and size
+- Decorative elements or embellishments (where and what type)
+- Ruffles, frills, or trim (location and style)
+- Special features (cut-outs, slits, overlays)
+
+Provide a comprehensive, measurement-focused technical description that ensures consistency between front and back views. Be specific about lengths, widths, and placement of all elements.`;
 
     console.log('📤 Sending sketch to Gemini 2.5 Pro for analysis...');
     const response = await ai.models.generateContent({
@@ -545,27 +565,31 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
             : frontContext; // Use front context if back description not available
 
         const commonRenderingSuffix = "The garment should be displayed on a neutral, ghost mannequin against a clean, light gray studio background. Focus on realistic fabric texture, drape, and professional lighting. Do not include any text or watermarks.";
+
+        // Enhanced consistency instructions for matching front and back views
+        const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
+
         const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only";
 
         const renderingFrontPromptText = frontIncludesBack
-            ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the FRONT VIEW. Ignore the back view entirely. Generate a photorealistic, professional rendering of ONLY the front view. ${commonRenderingSuffix}${frontContext}`
-            : `From this fashion sketch of a garment's front, generate a photorealistic, professional rendering. ${commonRenderingSuffix}${frontContext}`;
+            ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the FRONT VIEW. Ignore the back view entirely. Generate a photorealistic, professional rendering of ONLY the front view. ${commonRenderingSuffix}${consistencyRequirements}${frontContext}`
+            : `From this fashion sketch of a garment's front, generate a photorealistic, professional rendering. ${commonRenderingSuffix}${consistencyRequirements}${frontContext}`;
 
         const flatFrontPromptText = frontIncludesBack
-            ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the FRONT VIEW. Ignore the back view entirely. Create a technical flat illustration of ONLY the front view. ${commonFlatSuffix}${frontContext}`
-            : `From this fashion design image of a garment's front, create a technical flat illustration of the front view. ${commonFlatSuffix}${frontContext}`;
+            ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the FRONT VIEW. Ignore the back view entirely. Create a technical flat illustration of ONLY the front view. ${commonFlatSuffix}${consistencyRequirements}${frontContext}`
+            : `From this fashion design image of a garment's front, create a technical flat illustration of the front view. ${commonFlatSuffix}${consistencyRequirements}${frontContext}`;
 
         const renderingBackPromptText = backImagePart
-            ? `From this fashion sketch of a garment's back, generate a photorealistic, professional rendering. ${commonRenderingSuffix}${backContext}`
+            ? `From this fashion sketch of a garment's back, generate a photorealistic, professional rendering. ${commonRenderingSuffix}${consistencyRequirements}${backContext}`
             : frontIncludesBack
-                ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the BACK VIEW. Ignore the front view entirely. Generate a photorealistic, professional rendering of ONLY the back view. ${commonRenderingSuffix}${backContext}`
-                : `Based on the provided front view of the garment, infer and generate a photorealistic, professional rendering of the BACK VIEW. ${commonRenderingSuffix}${backContext}`;
+                ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the BACK VIEW. Ignore the front view entirely. Generate a photorealistic, professional rendering of ONLY the back view. ${commonRenderingSuffix}${consistencyRequirements}${backContext}`
+                : `Based on the provided front view of the garment, infer and generate a photorealistic, professional rendering of the BACK VIEW. ${commonRenderingSuffix}${consistencyRequirements}${backContext}`;
 
         const flatBackPromptText = backImagePart
-            ? `From this fashion design image of a garment's back, create a technical flat illustration of the back view. ${commonFlatSuffix}${backContext}`
+            ? `From this fashion design image of a garment's back, create a technical flat illustration of the back view. ${commonFlatSuffix}${consistencyRequirements}${backContext}`
             : frontIncludesBack
-                ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the BACK VIEW. Ignore the front view entirely. Create a technical flat illustration of ONLY the back view. ${commonFlatSuffix}${backContext}`
-                : `Based on the provided front view of the garment, infer and create a technical flat illustration of the BACK VIEW. ${commonFlatSuffix}${backContext}`;
+                ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the BACK VIEW. Ignore the front view entirely. Create a technical flat illustration of ONLY the back view. ${commonFlatSuffix}${consistencyRequirements}${backContext}`
+                : `Based on the provided front view of the garment, infer and create a technical flat illustration of the BACK VIEW. ${commonFlatSuffix}${consistencyRequirements}${backContext}`;
 
         const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
         const imagePartForBackPrompts = backImagePart ?? frontImagePart;
