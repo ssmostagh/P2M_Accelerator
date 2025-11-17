@@ -1,6 +1,6 @@
-# P2M Accelerator: Design Studio
+# P2M Accelerator: Micro-Trend Studio
 
-A powerful web application for virtual garment try-on, fashion design, and AI-powered moodboard creation, powered by Google's Gemini AI. This tool allows users to visualize garments on models, apply fabric changes, generate front and back views, create dynamic catwalk videos, and generate themed color palettes with image prompts for design inspiration.
+A comprehensive fashion design platform powered by Google's Gemini AI, featuring virtual garment try-on, AI-powered moodboard creation, and sketch-to-tech pack conversion. This tool enables designers to visualize garments on models, apply fabric changes, generate front and back views, create dynamic catwalk videos, generate themed color palettes, and transform hand-drawn sketches into professional technical illustrations ready for production.
 
 ## Features
 
@@ -18,11 +18,22 @@ A powerful web application for virtual garment try-on, fashion design, and AI-po
 ### Moodboard AI
 
 - **Theme-Based Color Palettes**: Generate curated Pantone color palettes based on design themes and keywords
-- **Smart Color Regeneration**: Regenerate individual colors with controls for lighter, darker, or random alternatives
+- **Smart Color Regeneration**: Regenerate individual colors with controls for lighter, darker, warmer, and cooler alternatives
 - **AI Image Prompts**: Generate detailed image prompts for each color based on your theme
 - **Pantone Integration**: Access to a comprehensive Pantone color database with intelligent filtering
 - **Export & Share**: Download color palettes and image prompts in organized panels
 - **Flexible Layouts**: Choose from 4-color, 6-color, or 8-color palette layouts
+
+### Tech Illustration
+
+- **Sketch-to-Tech Pack**: Transform hand-drawn sketches into professional technical illustrations
+- **AI Analysis**: Automatic garment analysis with detailed proportions and measurements
+- **Dual Output**: Generate both photorealistic renderings and technical flats
+- **Combined Views**: Front and back views generated side-by-side in single images
+- **Regeneration with Feedback**: Regenerate specific images with custom feedback for iterative refinement
+- **Consistency Control**: Built-in consistency requirements ensure front and back views match
+- **Factory-Ready Flats**: Technical flats suitable for manufacturer production with proper line weights and details
+- **Multiple Upload Options**: Support for separate front/back sketches or combined front+back images
 
 ## Technology Stack
 
@@ -173,11 +184,16 @@ P2M_Accelerator/
 │   ├── VirtualTryOn.tsx
 │   ├── FabricLibrary.tsx
 │   ├── HistoryPanel.tsx
-│   └── VideoPlayerModal.tsx
+│   ├── VideoPlayerModal.tsx
+│   ├── TechPackImageUploader.tsx   # Tech illustration sketch uploader
+│   ├── TechPackResultCard.tsx      # Tech pack result display with regeneration
+│   ├── TechPackSpinner.tsx         # Loading spinner for tech pack generation
+│   └── TechPackImagePreviewModal.tsx
 ├── pages/               # Page components
-│   ├── LandingPage.tsx       # Home page with navigation
-│   ├── MicroTrendStudio.tsx  # Main Micro-Trend Studio application
-│   └── MoodboardPage.tsx     # Moodboard AI interface
+│   ├── LandingPage.tsx            # Home page with navigation
+│   ├── MicroTrendStudio.tsx       # Main Micro-Trend Studio application
+│   ├── MoodboardPage.tsx          # Moodboard AI interface
+│   └── TechIllustrationPage.tsx   # Tech Illustration/Tech Pack generator
 ├── services/            # API service layer
 │   └── geminiService.ts
 ├── constants/           # Static data and configurations
@@ -216,12 +232,38 @@ P2M_Accelerator/
 2. **Choose Layout**: Select your preferred panel layout (4, 6, or 8 colors)
 3. **Generate Palette**: Click "Generate Moodboard" to create a curated Pantone color palette
 4. **Review Colors**: Each color card displays the Pantone name, code, and hex value
-5. **Regenerate Colors**: Click on individual color cards to:
+5. **Regenerate Colors**: Hover over individual color cards to access controls:
    - Generate a lighter shade (↑ Lighter button)
    - Generate a darker shade (↓ Darker button)
-   - Get a random alternative (refresh icon)
+   - Generate a warmer tone (🔥 Warmer button)
+   - Generate a cooler tone (❄️ Cooler button)
+   - Get a theme-appropriate alternative (Smart Pick button)
 6. **View Image Prompts**: Generated AI image prompts for each color provide visual inspiration
 7. **Export**: Download the complete moodboard with all colors and prompts
+
+### Tech Illustration
+
+1. **Upload Sketch(es)**:
+   - Upload a front view sketch (required)
+   - Optionally upload a separate back view sketch
+   - Or check "Front image includes both front and back views" if using a combined sketch
+2. **Generate Tech Pack**: Click "Generate" to create AI-powered technical illustrations
+3. **AI Processing**:
+   - AI analyzes your sketch for garment details, proportions, and measurements
+   - Generates photorealistic rendering with front and back views side-by-side
+   - Generates technical flat with front and back views side-by-side
+4. **Review Results**: View three cards:
+   - Your original sketch(es)
+   - Photorealistic rendering (Front + Back)
+   - Technical flat (Front + Back)
+5. **Regenerate with Feedback** (Optional):
+   - Click "Regenerate with Feedback" on any generated image
+   - Provide specific instructions (e.g., "shoulder should have bows not leaves")
+   - Click "Generate" to create an updated version
+   - Or use the quick regenerate icon to try a different variation without changes
+6. **Preview**: Click on any image to view it in full screen
+7. **Export**: Download individual images using the download button on each card
+8. **Start Over**: Click "Start Over" to generate a new tech pack from different sketches
 
 ## Troubleshooting
 
