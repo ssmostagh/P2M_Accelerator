@@ -665,6 +665,66 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
     }
 };
 
+const regenerateTechPackRendering = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false) => {
+    try {
+        console.log('🔄 REGENERATING RENDERING ONLY');
+
+        const model = imageEditingModel;
+        const frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
+        const imagePartForPrompts = backImageDataUrl ? dataUrlToGenerativePart(backImageDataUrl) : frontImagePart;
+
+        const commonRenderingSuffix = "The garment should be displayed on a neutral, ghost mannequin against a clean, light gray studio background. Focus on realistic fabric texture, drape, and professional lighting. Do not include any text or watermarks.";
+        const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
+
+        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT, with small gap. Both same size, aligned. ${commonRenderingSuffix}${consistencyRequirements}`;
+
+        const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
+        const renderingResult = await ai.models.generateContent({
+            model,
+            contents: { role: 'user', parts: [imagePartForPrompts, { text: renderingCombinedPrompt }] },
+            config: commonConfig
+        });
+
+        const renderingCombined = processApiResponse(renderingResult);
+        console.log('✅ Rendering regenerated successfully');
+
+        return { renderingCombined };
+    } catch (error) {
+        console.error('❌ RENDERING REGENERATION FAILED:', error);
+        throw error;
+    }
+};
+
+const regenerateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false) => {
+    try {
+        console.log('🔄 REGENERATING TECHNICAL FLAT ONLY');
+
+        const model = imageEditingModel;
+        const frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
+        const imagePartForPrompts = backImageDataUrl ? dataUrlToGenerativePart(backImageDataUrl) : frontImagePart;
+
+        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only";
+        const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
+
+        const flatCombinedPrompt = `Generate ONE technical flat showing BOTH front AND back views side by side. Front on LEFT, back on RIGHT, small gap. Both same size, aligned. ${commonFlatSuffix}${consistencyRequirements}`;
+
+        const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
+        const flatResult = await ai.models.generateContent({
+            model,
+            contents: { role: 'user', parts: [imagePartForPrompts, { text: flatCombinedPrompt }] },
+            config: commonConfig
+        });
+
+        const flatCombined = processApiResponse(flatResult);
+        console.log('✅ Technical flat regenerated successfully');
+
+        return { flatCombined };
+    } catch (error) {
+        console.error('❌ TECHNICAL FLAT REGENERATION FAILED:', error);
+        throw error;
+    }
+};
+
 const geminiService = {
     generateInitialImage,
     generateInitialImageVariations,
@@ -680,6 +740,8 @@ const geminiService = {
     // Tech Illustration functions
     analyzeTechPackSketch,
     generateTechPackAssets,
+    regenerateTechPackRendering,
+    regenerateTechPackFlat,
 };
 
 // --- API Endpoint ---
