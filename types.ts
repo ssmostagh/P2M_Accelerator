@@ -70,8 +70,6 @@ export interface TechPackUploadedImage {
 }
 
 export interface TechPackGeneratedImages {
-  renderingFront: string;
-  renderingBack: string;
-  flatFront: string;
-  flatBack: string;
+  renderingCombined: string;  // Single image with front + back renderings
+  flatCombined: string;        // Single image with front + back technical flats
 }

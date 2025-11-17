@@ -91,7 +91,7 @@ Ensure your account or service account has the following roles:
 
 ```bash
 git clone <repository-url>
-cd UFP
+cd P2M_Accelerator
 ```
 
 2. **Install dependencies**:
@@ -165,7 +165,7 @@ npm run serve
 ## Project Structure
 
 ```
-UFP/
+P2M_Accelerator/
 ├── components/           # React components
 │   ├── ColorCard.tsx    # Individual color swatch with regeneration controls
 │   ├── FinalizePanel.tsx
@@ -175,14 +175,14 @@ UFP/
 │   ├── HistoryPanel.tsx
 │   └── VideoPlayerModal.tsx
 ├── pages/               # Page components
-│   ├── LandingPage.tsx  # Home page with navigation
-│   ├── UFPDesignStudio.tsx  # Main UFP application
-│   └── MoodboardPage.tsx    # Moodboard AI interface
+│   ├── LandingPage.tsx       # Home page with navigation
+│   ├── MicroTrendStudio.tsx  # Main Micro-Trend Studio application
+│   └── MoodboardPage.tsx     # Moodboard AI interface
 ├── services/            # API service layer
 │   └── geminiService.ts
 ├── constants/           # Static data and configurations
-│   ├── pantoneColors.js # Pantone color database
-│   └── ufpConstants.ts  # Fabric library definitions
+│   ├── pantoneColors.js  # Pantone color database
+│   └── studioConstants.ts # Fabric library definitions
 ├── types/               # TypeScript type definitions
 │   └── index.ts
 ├── public/              # Static assets

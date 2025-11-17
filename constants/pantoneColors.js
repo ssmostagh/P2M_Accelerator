@@ -390,31 +390,174 @@ export function getRandomPantoneColors(count = 8) {
 export function getComplementaryPantoneColors(keywords, count = 8) {
   const lowerKeywords = keywords.toLowerCase();
 
-  // Very loose filtering - mainly exclude colors that would be obviously wrong
-  let excludeColors = [];
+  // Theme-specific color selection with keyword matching
+  let preferredColors = [];
 
-  // For explicitly pastel/soft themes - exclude only very dark/harsh colors
-  if (lowerKeywords.includes('pastel') || lowerKeywords.includes('delicate')) {
-    excludeColors = PANTONE_COLORS.filter(c => {
+  // DARK ACADEMIA - Deep, scholarly, muted tones (warm browns, burgundies, muted greens)
+  if (lowerKeywords.includes('dark academia') ||
+      lowerKeywords.includes('academia') ||
+      lowerKeywords.includes('scholarly') ||
+      lowerKeywords.includes('library')) {
+    preferredColors = PANTONE_COLORS.filter(c => {
       const name = c.name.toLowerCase();
-      return name.includes("black") || name.includes("noir") ||
-             name.includes("neon") || name.includes("electric");
+      const hex = c.code.toLowerCase();
+
+      // Explicitly EXCLUDE blue/teal/aqua colors
+      const excludeColors = name.includes("blue") || name.includes("teal") ||
+                           name.includes("aqua") || name.includes("turquoise") ||
+                           name.includes("sky") || name.includes("ocean") ||
+                           name.includes("lagoon") || name.includes("cyan") ||
+                           name.includes("cerulean") || name.includes("azure");
+
+      if (excludeColors) return false;
+
+      // Calculate color channels for warm tone detection
+      const r = parseInt(hex.substring(1, 3), 16);
+      const g = parseInt(hex.substring(3, 5), 16);
+      const b = parseInt(hex.substring(5, 7), 16);
+
+      // Prefer warm colors (red > blue, or red/green > blue)
+      const isWarmTone = r > b || (r + g) > (b * 1.5);
+
+      // Dark academia specific color names (warm, scholarly tones)
+      const academicNames = name.includes("burgundy") || name.includes("wine") ||
+                           name.includes("port") || name.includes("cabernet") ||
+                           name.includes("brown") || name.includes("chocolate") ||
+                           name.includes("cognac") || name.includes("leather") ||
+                           name.includes("camel") || name.includes("tan") ||
+                           name.includes("bronze") || name.includes("friar") ||
+                           name.includes("cordovan") || name.includes("mahogany") ||
+                           name.includes("espresso") || name.includes("mole") ||
+                           name.includes("taupe") || name.includes("brindle") ||
+                           name.includes("olive") || name.includes("cedar") ||
+                           name.includes("moss") || name.includes("sage") ||
+                           name.includes("forest") || name.includes("hunter") ||
+                           name.includes("ivy") || name.includes("evergreen") ||
+                           name.includes("charcoal") || name.includes("graphite") ||
+                           name.includes("slate") || name.includes("pewter") ||
+                           name.includes("raven") || name.includes("shadow");
+
+      return academicNames && isWarmTone;
     });
+    console.log(`🎓 Found ${preferredColors.length} dark academia colors`);
   }
-  // For neon/electric themes - exclude muted colors
-  else if (lowerKeywords.includes('neon') || lowerKeywords.includes('electric')) {
-    excludeColors = PANTONE_COLORS.filter(c => {
+
+  // PASTEL/SOFT THEMES - Light, delicate colors
+  else if (lowerKeywords.includes('pastel') ||
+           lowerKeywords.includes('delicate') ||
+           lowerKeywords.includes('soft') ||
+           lowerKeywords.includes('baby') ||
+           lowerKeywords.includes('sweet')) {
+    preferredColors = PANTONE_COLORS.filter(c => {
       const name = c.name.toLowerCase();
-      return name.includes("gray") || name.includes("grey") ||
-             name.includes("muted") || name.includes("dusty");
+      const hex = c.code.toLowerCase();
+      const r = parseInt(hex.substring(1, 3), 16);
+      const g = parseInt(hex.substring(3, 5), 16);
+      const b = parseInt(hex.substring(5, 7), 16);
+
+      const isDark = name.includes("black") || name.includes("noir") ||
+                     name.includes("navy") || name.includes("deep") ||
+                     name.includes("dark") || name.includes("burgundy");
+
+      const isLight = (r > 180 && g > 180) || (r > 180 && b > 180) ||
+                     (g > 180 && b > 180) || r > 220 || g > 220 || b > 220;
+
+      return !isDark && isLight;
     });
+    console.log(`🌸 Found ${preferredColors.length} pastel colors`);
   }
 
-  // Filter out excluded colors
-  const excludedCodes = new Set(excludeColors.map(c => c.code));
-  const availableColors = PANTONE_COLORS.filter(c => !excludedCodes.has(c.code));
+  // NEON/ELECTRIC - Bright, vibrant colors
+  else if (lowerKeywords.includes('neon') ||
+           lowerKeywords.includes('electric') ||
+           lowerKeywords.includes('vibrant') ||
+           lowerKeywords.includes('bright')) {
+    preferredColors = PANTONE_COLORS.filter(c => {
+      const name = c.name.toLowerCase();
+      return name.includes("vibrant") || name.includes("shocking") ||
+             name.includes("electric") || name.includes("neon") ||
+             name.includes("brilliant") || name.includes("blazing") ||
+             name.includes("solar") || name.includes("radiant");
+    });
+    console.log(`⚡ Found ${preferredColors.length} neon/bright colors`);
+  }
 
-  console.log(`🎨 Available colors after exclusions: ${availableColors.length}/${PANTONE_COLORS.length}`);
+  // EARTHY/NATURAL - Browns, greens, tans
+  else if (lowerKeywords.includes('earth') ||
+           lowerKeywords.includes('natural') ||
+           lowerKeywords.includes('organic') ||
+           lowerKeywords.includes('botanical')) {
+    preferredColors = PANTONE_COLORS.filter(c => {
+      const name = c.name.toLowerCase();
+      return name.includes("earth") || name.includes("sand") ||
+             name.includes("moss") || name.includes("sage") ||
+             name.includes("olive") || name.includes("khaki") ||
+             name.includes("tan") || name.includes("beige") ||
+             name.includes("brown") || name.includes("green") ||
+             name.includes("leaf") || name.includes("fern") ||
+             name.includes("cedar") || name.includes("forest");
+    });
+    console.log(`🌿 Found ${preferredColors.length} earthy colors`);
+  }
+
+  // MOODY/GOTHIC - Dark, dramatic colors
+  else if (lowerKeywords.includes('moody') ||
+           lowerKeywords.includes('gothic') ||
+           lowerKeywords.includes('dark') ||
+           lowerKeywords.includes('dramatic')) {
+    preferredColors = PANTONE_COLORS.filter(c => {
+      const name = c.name.toLowerCase();
+      const hex = c.code.toLowerCase();
+      const r = parseInt(hex.substring(1, 3), 16);
+      const g = parseInt(hex.substring(3, 5), 16);
+      const b = parseInt(hex.substring(5, 7), 16);
+      const brightness = (r + g + b) / 3;
+
+      return brightness < 80 || name.includes("night") ||
+             name.includes("shadow") || name.includes("raven") ||
+             name.includes("noir") || name.includes("deep") ||
+             name.includes("dark") || name.includes("eclipse");
+    });
+    console.log(`🖤 Found ${preferredColors.length} moody/gothic colors`);
+  }
+
+  // COASTAL/OCEAN - Blues, teals, sandy neutrals
+  else if (lowerKeywords.includes('coastal') ||
+           lowerKeywords.includes('ocean') ||
+           lowerKeywords.includes('beach') ||
+           lowerKeywords.includes('nautical') ||
+           lowerKeywords.includes('marine')) {
+    preferredColors = PANTONE_COLORS.filter(c => {
+      const name = c.name.toLowerCase();
+      return name.includes("blue") || name.includes("aqua") ||
+             name.includes("teal") || name.includes("turquoise") ||
+             name.includes("ocean") || name.includes("sea") ||
+             name.includes("coastal") || name.includes("sand") ||
+             name.includes("pearl") || name.includes("shell") ||
+             name.includes("coral") || name.includes("lagoon");
+    });
+    console.log(`🌊 Found ${preferredColors.length} coastal colors`);
+  }
+
+  // VINTAGE/RETRO - Muted, dusty tones
+  else if (lowerKeywords.includes('vintage') ||
+           lowerKeywords.includes('retro') ||
+           lowerKeywords.includes('nostalgic') ||
+           lowerKeywords.includes('classic')) {
+    preferredColors = PANTONE_COLORS.filter(c => {
+      const name = c.name.toLowerCase();
+      return name.includes("dusty") || name.includes("muted") ||
+             name.includes("vintage") || name.includes("classic") ||
+             name.includes("antique") || name.includes("faded") ||
+             name.includes("mauve") || name.includes("taupe") ||
+             name.includes("rose") || name.includes("sage");
+    });
+    console.log(`📻 Found ${preferredColors.length} vintage colors`);
+  }
+
+  // If we found theme-specific colors, use them; otherwise use all colors
+  const availableColors = preferredColors.length > 0 ? preferredColors : PANTONE_COLORS;
+  console.log(`🎨 Using ${availableColors.length} colors for selection`);
 
   // Use diversity function to select varied colors
   return shuffleAndSelectDiverse(availableColors, count, false);
@@ -496,65 +639,5 @@ function shuffleAndSelectDiverse(colors, count, isSoftTheme = false) {
   }
 
   console.log(`✅ Selected ${selected.length} diverse colors`);
-  return selected;
-}
-
-// Helper to shuffle and select colors
-function shuffleAndSelect(colors, count, isSoftTheme = false) {
-  const shuffled = [...colors].sort(() => Math.random() - 0.5);
-  const selected = shuffled.slice(0, count);
-
-  // If we don't have enough, fill with appropriate colors
-  if (selected.length < count) {
-    const needed = count - selected.length;
-    console.log(`⚠️ Need ${needed} more colors (have ${selected.length}, need ${count})`);
-    const existingCodes = new Set(selected.map(c => c.code));
-
-    let additional;
-    if (isSoftTheme) {
-      // For soft themes, only fill with light colors, never dark ones
-      const lightColors = PANTONE_COLORS.filter(c => {
-        const name = c.name.toLowerCase();
-        const hex = c.code.toLowerCase();
-
-        // Exclude dark colors
-        const isDark = name.includes("burgundy") || name.includes("cabernet") ||
-          name.includes("royal purple") || name.includes("deep") || name.includes("dark") ||
-          name.includes("black") || name.includes("navy") || name.includes("chocolate") ||
-          name.includes("espresso") || name.includes("mahogany") || name.includes("noir") ||
-          name.includes("night") || name.includes("raven") || name.includes("shadow");
-
-        if (isDark) return false;
-
-        // Only include if light by hex code - more permissive
-        const r = parseInt(hex.substring(1, 3), 16);
-        const g = parseInt(hex.substring(3, 5), 16);
-        const b = parseInt(hex.substring(5, 7), 16);
-        // At least 2 channels above 140, OR any channel above 200
-        const isLightEnough = (r > 140 && g > 140) || (r > 140 && b > 140) || (g > 140 && b > 140) ||
-                              r > 200 || g > 200 || b > 200;
-        return isLightEnough && !existingCodes.has(c.code);
-      });
-
-      console.log(`💡 Found ${lightColors.length} additional light colors for fallback`);
-      if (lightColors.length < needed) {
-        console.error(`❌ WARNING: Only found ${lightColors.length} light colors, but need ${needed}. May include darker colors.`);
-      }
-
-      additional = [...lightColors]
-        .sort(() => Math.random() - 0.5)
-        .slice(0, needed);
-
-      console.log(`✅ Adding ${additional.length} colors:`, additional.map(c => c.name));
-    } else {
-      // For other themes, use random colors
-      additional = getRandomPantoneColors(needed * 2)
-        .filter(c => !existingCodes.has(c.code))
-        .slice(0, needed);
-    }
-
-    selected.push(...additional);
-  }
-
   return selected;
 }

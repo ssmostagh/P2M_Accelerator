@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { TechPackImageUploader } from '../components/TechPackImageUploader';
 import { TechPackResultCard } from '../components/TechPackResultCard';
 import { TechPackSpinner } from '../components/TechPackSpinner';
@@ -20,6 +20,8 @@ export default function TechPackPage() {
   const [loadingStep, setLoadingStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [previewingImage, setPreviewingImage] = useState<string | null>(null);
+  const [isRegeneratingRendering, setIsRegeneratingRendering] = useState<boolean>(false);
+  const [isRegeneratingFlat, setIsRegeneratingFlat] = useState<boolean>(false);
 
   const handleGenerate = useCallback(async (frontFile: File, backFile: File | null, includesBack: boolean) => {
     const frontDataUrl = URL.createObjectURL(frontFile);
@@ -62,6 +64,14 @@ export default function TechPackPage() {
 
       setLoadingStep('Finalizing results...');
       const results = await response.json();
+      console.log('📦 Received tech pack results:', {
+        hasRenderingCombined: !!results.renderingCombined,
+        hasFlatCombined: !!results.flatCombined,
+        renderingLength: results.renderingCombined?.length,
+        flatLength: results.flatCombined?.length,
+        renderingPrefix: results.renderingCombined?.substring(0, 50),
+        flatPrefix: results.flatCombined?.substring(0, 50)
+      });
       setGeneratedImages(results);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -88,6 +98,74 @@ export default function TechPackPage() {
     });
   };
 
+  const handleRegenerateRendering = useCallback(async (feedback?: string) => {
+    if (!uploadedImages.front || !generatedImages) return;
+
+    setIsRegeneratingRendering(true);
+    setError(null);
+
+    try {
+      const frontBase64 = await fileToDataUrl(uploadedImages.front.file);
+      const backBase64 = uploadedImages.back ? await fileToDataUrl(uploadedImages.back.file) : null;
+
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          func: 'regenerateTechPackRendering',
+          args: [frontBase64, backBase64, frontIncludesBack, feedback]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to regenerate rendering');
+      }
+
+      const result = await response.json();
+      setGeneratedImages(prev => prev ? { ...prev, renderingCombined: result.renderingCombined } : null);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+      console.error(e);
+      setError(`Regeneration failed: ${errorMessage}`);
+    } finally {
+      setIsRegeneratingRendering(false);
+    }
+  }, [uploadedImages, generatedImages, frontIncludesBack]);
+
+  const handleRegenerateFlat = useCallback(async (feedback?: string) => {
+    if (!uploadedImages.front || !generatedImages) return;
+
+    setIsRegeneratingFlat(true);
+    setError(null);
+
+    try {
+      const frontBase64 = await fileToDataUrl(uploadedImages.front.file);
+      const backBase64 = uploadedImages.back ? await fileToDataUrl(uploadedImages.back.file) : null;
+
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          func: 'regenerateTechPackFlat',
+          args: [frontBase64, backBase64, frontIncludesBack, feedback]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to regenerate technical flat');
+      }
+
+      const result = await response.json();
+      setGeneratedImages(prev => prev ? { ...prev, flatCombined: result.flatCombined } : null);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+      console.error(e);
+      setError(`Regeneration failed: ${errorMessage}`);
+    } finally {
+      setIsRegeneratingFlat(false);
+    }
+  }, [uploadedImages, generatedImages, frontIncludesBack]);
+
   const handleReset = () => {
     if (uploadedImages.front) {
       URL.revokeObjectURL(uploadedImages.front.dataUrl);
@@ -101,6 +179,8 @@ export default function TechPackPage() {
     setIsLoading(false);
     setLoadingStep('');
     setFrontIncludesBack(false);
+    setIsRegeneratingRendering(false);
+    setIsRegeneratingFlat(false);
   };
 
   return (
@@ -153,10 +233,8 @@ export default function TechPackPage() {
                   {uploadedImages.back && <TechPackResultCard title="Your Sketch (Back)" imageUrl={uploadedImages.back.dataUrl} altText="User's uploaded back sketch" fileName="original-sketch-back.png" onPreview={setPreviewingImage} />}
                 </>
               )}
-              <TechPackResultCard title="Rendering (Front)" imageUrl={generatedImages.renderingFront} altText="AI-generated professional rendering of front" fileName="rendering-front.png" onPreview={setPreviewingImage} />
-              <TechPackResultCard title="Rendering (Back)" imageUrl={generatedImages.renderingBack} altText="AI-generated professional rendering of back" fileName="rendering-back.png" onPreview={setPreviewingImage} />
-              <TechPackResultCard title="Technical Flat (Front)" imageUrl={generatedImages.flatFront} altText="AI-generated technical flat of front" fileName="technical-flat-front.png" onPreview={setPreviewingImage} />
-              <TechPackResultCard title="Technical Flat (Back)" imageUrl={generatedImages.flatBack} altText="AI-generated technical flat of back" fileName="technical-flat-back.png" onPreview={setPreviewingImage} />
+              <TechPackResultCard title="Photorealistic Rendering (Front + Back)" imageUrl={generatedImages.renderingCombined} altText="AI-generated professional rendering with front and back views" fileName="rendering-combined.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateRendering} isRegenerating={isRegeneratingRendering} />
+              <TechPackResultCard title="Technical Flat (Front + Back)" imageUrl={generatedImages.flatCombined} altText="AI-generated technical flat with front and back views" fileName="technical-flat-combined.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateFlat} isRegenerating={isRegeneratingFlat} />
             </div>
           </div>
         )}
