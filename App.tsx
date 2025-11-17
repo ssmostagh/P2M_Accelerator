@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
-import UFPDesignStudio from './pages/UFPDesignStudio';
+import MicroTrendStudio from './pages/MicroTrendStudio';
 import MoodboardPage from './pages/MoodboardPage';
 import TechIllustrationPage from './pages/TechIllustrationPage';
 
@@ -78,7 +78,7 @@ const App: React.FC = () => {
         <div className="flex-1 min-h-0 overflow-hidden">
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/ufp" element={<UFPDesignStudio />} />
+            <Route path="/ufp" element={<MicroTrendStudio />} />
             <Route path="/moodboard" element={<MoodboardPage />} />
             <Route path="/techpack" element={<TechIllustrationPage />} />
           </Routes>

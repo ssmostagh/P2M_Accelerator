@@ -7,7 +7,7 @@ import { HistoryPanel } from '../components/HistoryPanel';
 import { generatePrompt, editImage, generateInitialImageVariations, generateEditVariations, generateVideoVariations } from '../services/geminiService';
 import { DesignView, HistoryGroup, HistoryActionType, HistoryImage } from '../types';
 
-const App: React.FC = () => {
+const MicroTrendStudio: React.FC = () => {
   const [modelImage, setModelImage] = useState<File | null>(null);
   const [garmentImage, setGarmentImage] = useState<File | null>(null);
   
@@ -358,4 +358,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default MicroTrendStudio;
