@@ -98,7 +98,7 @@ export default function TechPackPage() {
     });
   };
 
-  const handleRegenerateRendering = useCallback(async () => {
+  const handleRegenerateRendering = useCallback(async (feedback?: string) => {
     if (!uploadedImages.front || !generatedImages) return;
 
     setIsRegeneratingRendering(true);
@@ -113,7 +113,7 @@ export default function TechPackPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           func: 'regenerateTechPackRendering',
-          args: [frontBase64, backBase64, frontIncludesBack]
+          args: [frontBase64, backBase64, frontIncludesBack, feedback]
         })
       });
 
@@ -132,7 +132,7 @@ export default function TechPackPage() {
     }
   }, [uploadedImages, generatedImages, frontIncludesBack]);
 
-  const handleRegenerateFlat = useCallback(async () => {
+  const handleRegenerateFlat = useCallback(async (feedback?: string) => {
     if (!uploadedImages.front || !generatedImages) return;
 
     setIsRegeneratingFlat(true);
@@ -147,7 +147,7 @@ export default function TechPackPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           func: 'regenerateTechPackFlat',
-          args: [frontBase64, backBase64, frontIncludesBack]
+          args: [frontBase64, backBase64, frontIncludesBack, feedback]
         })
       });
 
