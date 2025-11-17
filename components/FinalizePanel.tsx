@@ -24,6 +24,8 @@ interface FinalizePanelProps {
   isBackGenerated: boolean;
   isBackFinalized: boolean;
   isLoading: boolean;
+  finalFrontImage: string | null;
+  finalBackImage: string | null;
 }
 
 export const FinalizePanel: React.FC<FinalizePanelProps> = ({
@@ -46,6 +48,8 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
   isBackGenerated,
   isBackFinalized,
   isLoading,
+  finalFrontImage,
+  finalBackImage,
 }) => {
   const [showVideoModal, setShowVideoModal] = React.useState(false);
   const [previewVideoUrl, setPreviewVideoUrl] = React.useState<string | null>(null);
@@ -122,10 +126,38 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
         </div>
 
         {(isFrontFinalized || isBackFinalized) && (
-          <div className="border-t border-gray-700 pt-4 space-y-2">
+          <div className="border-t border-gray-700 pt-4 space-y-3">
             <h3 className="text-lg font-semibold text-gray-300">Finalized Designs</h3>
-            {isFrontFinalized && <p className="text-sm text-green-400">✓ Front design finalized</p>}
-            {isBackFinalized && <p className="text-sm text-green-400">✓ Back design finalized</p>}
+            {isFrontFinalized && !isBackFinalized && <p className="text-sm text-green-400">✓ Front design finalized</p>}
+
+            {/* Side-by-side preview when both are finalized */}
+            {isFrontFinalized && isBackFinalized && finalFrontImage && finalBackImage && (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-400 text-center font-semibold">FRONT</p>
+                    <div className="bg-gray-900 rounded-lg overflow-hidden border border-gray-600">
+                      <img
+                        src={finalFrontImage}
+                        alt="Finalized front design"
+                        className="w-full h-auto object-contain"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-400 text-center font-semibold">BACK</p>
+                    <div className="bg-gray-900 rounded-lg overflow-hidden border border-gray-600">
+                      <img
+                        src={finalBackImage}
+                        alt="Finalized back design"
+                        className="w-full h-auto object-contain"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-green-400 text-center">✓ Complete design ready for export</p>
+              </div>
+            )}
           </div>
         )}
 

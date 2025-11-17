@@ -350,6 +350,8 @@ const MicroTrendStudio: React.FC = () => {
             isBackGenerated={!!backImage}
             isBackFinalized={!!finalBackImage}
             isLoading={isAppBusy}
+            finalFrontImage={finalFrontImage}
+            finalBackImage={finalBackImage}
           />
           <HistoryPanel history={history} onSelect={handleSelectHistory} />
         </div>
