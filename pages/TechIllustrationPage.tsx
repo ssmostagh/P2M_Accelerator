@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { TechPackImageUploader } from '../components/TechPackImageUploader';
 import { TechPackResultCard } from '../components/TechPackResultCard';
 import { TechPackSpinner } from '../components/TechPackSpinner';
