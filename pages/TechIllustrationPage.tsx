@@ -153,10 +153,8 @@ export default function TechPackPage() {
                   {uploadedImages.back && <TechPackResultCard title="Your Sketch (Back)" imageUrl={uploadedImages.back.dataUrl} altText="User's uploaded back sketch" fileName="original-sketch-back.png" onPreview={setPreviewingImage} />}
                 </>
               )}
-              <TechPackResultCard title="Rendering (Front)" imageUrl={generatedImages.renderingFront} altText="AI-generated professional rendering of front" fileName="rendering-front.png" onPreview={setPreviewingImage} />
-              <TechPackResultCard title="Rendering (Back)" imageUrl={generatedImages.renderingBack} altText="AI-generated professional rendering of back" fileName="rendering-back.png" onPreview={setPreviewingImage} />
-              <TechPackResultCard title="Technical Flat (Front)" imageUrl={generatedImages.flatFront} altText="AI-generated technical flat of front" fileName="technical-flat-front.png" onPreview={setPreviewingImage} />
-              <TechPackResultCard title="Technical Flat (Back)" imageUrl={generatedImages.flatBack} altText="AI-generated technical flat of back" fileName="technical-flat-back.png" onPreview={setPreviewingImage} />
+              <TechPackResultCard title="Photorealistic Rendering (Front + Back)" imageUrl={generatedImages.renderingCombined} altText="AI-generated professional rendering with front and back views" fileName="rendering-combined.png" onPreview={setPreviewingImage} />
+              <TechPackResultCard title="Technical Flat (Front + Back)" imageUrl={generatedImages.flatCombined} altText="AI-generated technical flat with front and back views" fileName="technical-flat-combined.png" onPreview={setPreviewingImage} />
             </div>
           </div>
         )}

@@ -599,44 +599,30 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
 
         const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only";
 
-        const renderingFrontPromptText = frontIncludesBack
-            ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the FRONT VIEW. Ignore the back view entirely. Generate a photorealistic, professional rendering of ONLY the front view. ${commonRenderingSuffix}${consistencyRequirements}${frontContext}`
-            : `From this fashion sketch of a garment's front, generate a photorealistic, professional rendering. ${commonRenderingSuffix}${consistencyRequirements}${frontContext}`;
-
-        const flatFrontPromptText = frontIncludesBack
-            ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the FRONT VIEW. Ignore the back view entirely. Create a technical flat illustration of ONLY the front view. ${commonFlatSuffix}${consistencyRequirements}${frontContext}`
-            : `From this fashion design image of a garment's front, create a technical flat illustration of the front view. ${commonFlatSuffix}${consistencyRequirements}${frontContext}`;
-
-        const renderingBackPromptText = backImagePart
-            ? `From this fashion sketch of a garment's back, generate a photorealistic, professional rendering. ${commonRenderingSuffix}${consistencyRequirements}${backContext}`
-            : frontIncludesBack
-                ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the BACK VIEW. Ignore the front view entirely. Generate a photorealistic, professional rendering of ONLY the back view. ${commonRenderingSuffix}${consistencyRequirements}${backContext}`
-                : `Based on the provided front view of the garment, infer and generate a photorealistic, professional rendering of the BACK VIEW. ${commonRenderingSuffix}${consistencyRequirements}${backContext}`;
-
-        const flatBackPromptText = backImagePart
-            ? `From this fashion design image of a garment's back, create a technical flat illustration of the back view. ${commonFlatSuffix}${consistencyRequirements}${backContext}`
-            : frontIncludesBack
-                ? `The provided image contains both a front and a back view. Your task is to focus EXCLUSIVELY on the BACK VIEW. Ignore the front view entirely. Create a technical flat illustration of ONLY the back view. ${commonFlatSuffix}${consistencyRequirements}${backContext}`
-                : `Based on the provided front view of the garment, infer and create a technical flat illustration of the BACK VIEW. ${commonFlatSuffix}${consistencyRequirements}${backContext}`;
 
         const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
         const imagePartForBackPrompts = backImagePart ?? frontImagePart;
 
-        console.log('📸 Starting parallel generation of 4 images...');
-        console.log('   - Rendering Front');
-        console.log('   - Technical Flat Front');
-        console.log('   - Rendering Back');
-        console.log('   - Technical Flat Back');
+        // Combined image generation (front AND back in single images)
+        const combinedContext = frontDescription && backDescription
+            ? `\n\nFRONT VIEW ANALYSIS:\n${frontDescription}\n\nBACK VIEW ANALYSIS:\n${backDescription}`
+            : frontDescription || '';
 
-        let renderingFrontResult, flatFrontResult, renderingBackResult, flatBackResult;
+        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT, with small gap. Both same size, aligned. ${commonRenderingSuffix}${consistencyRequirements}${combinedContext}`;
+
+        const flatCombinedPrompt = `Generate ONE technical flat showing BOTH front AND back views side by side. Front on LEFT, back on RIGHT, small gap. Both same size, aligned. ${commonFlatSuffix}${consistencyRequirements}${combinedContext}`;
+
+        console.log('📸 Starting generation of 2 combined images...');
+        console.log('   - Combined Rendering (Front + Back)');
+        console.log('   - Combined Technical Flat (Front + Back)');
+
+        let renderingCombinedResult, flatCombinedResult;
         try {
-            [renderingFrontResult, flatFrontResult, renderingBackResult, flatBackResult] = await Promise.all([
-                ai.models.generateContent({ model, contents: { role: 'user', parts: [frontImagePart, { text: renderingFrontPromptText }] }, config: commonConfig }),
-                ai.models.generateContent({ model, contents: { role: 'user', parts: [frontImagePart, { text: flatFrontPromptText }] }, config: commonConfig }),
-                ai.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingBackPromptText }] }, config: commonConfig }),
-                ai.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: flatBackPromptText }] }, config: commonConfig })
+            [renderingCombinedResult, flatCombinedResult] = await Promise.all([
+                ai.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: commonConfig }),
+                ai.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: flatCombinedPrompt }] }, config: commonConfig })
             ]);
-            console.log('✅ All API calls completed successfully');
+            console.log('✅ Both API calls completed successfully');
         } catch (error) {
             console.error('❌ Error during image generation API calls:', error);
             console.error('Error details:', {
@@ -648,16 +634,12 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
         }
 
         console.log('🔄 Processing API responses...');
-        let renderingFront, flatFront, renderingBack, flatBack;
+        let renderingCombined, flatCombined;
         try {
-            renderingFront = processApiResponse(renderingFrontResult);
-            console.log('✅ Rendering Front processed');
-            flatFront = processApiResponse(flatFrontResult);
-            console.log('✅ Technical Flat Front processed');
-            renderingBack = processApiResponse(renderingBackResult);
-            console.log('✅ Rendering Back processed');
-            flatBack = processApiResponse(flatBackResult);
-            console.log('✅ Technical Flat Back processed');
+            renderingCombined = processApiResponse(renderingCombinedResult);
+            console.log('✅ Combined Rendering (Front + Back) processed');
+            flatCombined = processApiResponse(flatCombinedResult);
+            console.log('✅ Combined Technical Flat (Front + Back) processed');
         } catch (error) {
             console.error('❌ Error processing API responses:', error);
             console.error('Error details:', {
@@ -668,10 +650,10 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
         }
 
         console.log('========================================');
-        console.log('✅ TECH PACK GENERATION COMPLETE');
+        console.log('✅ TECH PACK GENERATION COMPLETE (2 combined images)');
         console.log('========================================');
 
-        return { renderingFront, renderingBack, flatFront, flatBack };
+        return { renderingCombined, flatCombined };
     } catch (error) {
         console.error('========================================');
         console.error('❌ TECH PACK GENERATION FAILED');
