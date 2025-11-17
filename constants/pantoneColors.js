@@ -393,7 +393,7 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
   // Theme-specific color selection with keyword matching
   let preferredColors = [];
 
-  // DARK ACADEMIA - Deep, scholarly, muted tones
+  // DARK ACADEMIA - Deep, scholarly, muted tones (warm browns, burgundies, muted greens)
   if (lowerKeywords.includes('dark academia') ||
       lowerKeywords.includes('academia') ||
       lowerKeywords.includes('scholarly') ||
@@ -402,25 +402,42 @@ export function getComplementaryPantoneColors(keywords, count = 8) {
       const name = c.name.toLowerCase();
       const hex = c.code.toLowerCase();
 
-      // Calculate darkness
+      // Explicitly EXCLUDE blue/teal/aqua colors
+      const excludeColors = name.includes("blue") || name.includes("teal") ||
+                           name.includes("aqua") || name.includes("turquoise") ||
+                           name.includes("sky") || name.includes("ocean") ||
+                           name.includes("lagoon") || name.includes("cyan") ||
+                           name.includes("cerulean") || name.includes("azure");
+
+      if (excludeColors) return false;
+
+      // Calculate color channels for warm tone detection
       const r = parseInt(hex.substring(1, 3), 16);
       const g = parseInt(hex.substring(3, 5), 16);
       const b = parseInt(hex.substring(5, 7), 16);
-      const brightness = (r + g + b) / 3;
 
-      // Look for dark academia colors: burgundy, forest green, navy, brown, cognac, etc.
+      // Prefer warm colors (red > blue, or red/green > blue)
+      const isWarmTone = r > b || (r + g) > (b * 1.5);
+
+      // Dark academia specific color names (warm, scholarly tones)
       const academicNames = name.includes("burgundy") || name.includes("wine") ||
-                           name.includes("forest") || name.includes("hunter") ||
-                           name.includes("navy") || name.includes("sapphire") ||
+                           name.includes("port") || name.includes("cabernet") ||
                            name.includes("brown") || name.includes("chocolate") ||
                            name.includes("cognac") || name.includes("leather") ||
-                           name.includes("olive") || name.includes("cedar") ||
+                           name.includes("camel") || name.includes("tan") ||
                            name.includes("bronze") || name.includes("friar") ||
                            name.includes("cordovan") || name.includes("mahogany") ||
                            name.includes("espresso") || name.includes("mole") ||
-                           name.includes("deep") && brightness < 100;
+                           name.includes("taupe") || name.includes("brindle") ||
+                           name.includes("olive") || name.includes("cedar") ||
+                           name.includes("moss") || name.includes("sage") ||
+                           name.includes("forest") || name.includes("hunter") ||
+                           name.includes("ivy") || name.includes("evergreen") ||
+                           name.includes("charcoal") || name.includes("graphite") ||
+                           name.includes("slate") || name.includes("pewter") ||
+                           name.includes("raven") || name.includes("shadow");
 
-      return academicNames || (brightness < 100 && !name.includes("black"));
+      return academicNames && isWarmTone;
     });
     console.log(`🎓 Found ${preferredColors.length} dark academia colors`);
   }

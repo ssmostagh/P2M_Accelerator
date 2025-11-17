@@ -444,7 +444,7 @@ const regenerateColor = async (currentColorName, themePrompt, direction) => {
     // Get a different color from the Pantone database
     let availableColors = PANTONE_COLORS.filter(color => color.name !== currentColorName);
 
-    // If direction is specified, filter by lightness
+    // If direction is specified, filter by the requested attribute
     if (direction && currentColor) {
         const currentHex = currentColor.code.toLowerCase();
         const currentR = parseInt(currentHex.substring(1, 3), 16);
@@ -464,6 +464,16 @@ const regenerateColor = async (currentColorName, themePrompt, direction) => {
                 return brightness > currentBrightness + 20; // At least 20 points brighter
             } else if (direction === 'darker') {
                 return brightness < currentBrightness - 20; // At least 20 points darker
+            } else if (direction === 'warmer') {
+                // Warmer = more red/yellow (higher R, higher R relative to B)
+                const currentWarmth = currentR - currentB;
+                const warmth = r - b;
+                return warmth > currentWarmth + 15; // At least 15 points warmer
+            } else if (direction === 'cooler') {
+                // Cooler = more blue/green (higher B relative to R)
+                const currentCoolness = currentB - currentR;
+                const coolness = b - r;
+                return coolness > currentCoolness + 15; // At least 15 points cooler
             }
             return true;
         });
@@ -471,7 +481,7 @@ const regenerateColor = async (currentColorName, themePrompt, direction) => {
         console.log(`Filtered to ${availableColors.length} ${direction} colors`);
     }
 
-    // If we can extract keywords from the theme prompt, use them
+    // Smart color selection based on theme and direction
     let newColor;
 
     if (themePrompt && themePrompt.length > 10 && availableColors.length > 0) {
@@ -495,6 +505,24 @@ const regenerateColor = async (currentColorName, themePrompt, direction) => {
 
             if (complementaryColors.length > 0) {
                 newColor = complementaryColors[Math.floor(Math.random() * complementaryColors.length)];
+                console.log(`🎯 Smart regenerate: Selected theme-appropriate ${direction || 'complementary'} color`);
+            }
+        }
+    }
+
+    // If no direction specified (smart regenerate), prefer theme-appropriate colors
+    if (!newColor && !direction && themePrompt && availableColors.length > 0) {
+        console.log('🧠 Smart regenerate mode: Finding theme-appropriate alternative');
+        // Use theme keywords to find better color
+        const keywordMatch = themePrompt.match(/keywords[:\s]+['"](.*?)['"]/i) || themePrompt.match(/theme[:\s]+['"](.*?)['"]/i);
+        if (keywordMatch) {
+            const keywords = keywordMatch[1];
+            const smartColors = getComplementaryPantoneColors(keywords, 15)
+                .filter(c => c.name !== currentColorName);
+
+            if (smartColors.length > 0) {
+                newColor = smartColors[Math.floor(Math.random() * smartColors.length)];
+                console.log('✨ Smart pick: theme-matching color');
             }
         }
     }
