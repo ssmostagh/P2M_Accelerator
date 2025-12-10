@@ -50,7 +50,8 @@ const auth = new GoogleAuth({
     scopes: ['https://www.googleapis.com/auth/cloud-platform']
 });
 
-const imageEditingModel = 'gemini-2.5-flash-image';
+// const imageEditingModel = 'gemini-2.5-flash-image'; // old model
+const imageEditingModel = 'gemini-3.0-pro-image-preview';
 const textVisionModel = 'gemini-2.5-pro'; // For garment description
 const videoModel = 'veo-3.1-generate-preview';
 
