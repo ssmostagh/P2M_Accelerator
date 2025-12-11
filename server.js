@@ -123,6 +123,91 @@ const processApiResponse = (response) => {
     throw new Error('No image found in the API response.');
 };
 
+// Helper function to generate model-specific virtual try-on prompts
+const getVirtualTryOnPrompt = (garmentDescription, modelName) => {
+    // Gemini 3.0 Pro benefits from more structured, detailed prompts
+    if (modelName === 'gemini-3.0-pro-image-preview') {
+        return `You are an expert fashion photographer and virtual try-on specialist. Your task is to create a photorealistic image of the person wearing the specified garment.
+
+INPUT IMAGES:
+1. Model Image: Shows a person in their current outfit
+2. Garment Image: Shows the garment to be virtually tried on
+
+GARMENT TO APPLY:
+${garmentDescription}
+
+YOUR TASK:
+Create a single, photorealistic image where the person from the model image is wearing the garment from the garment image. This must look like a professional fashion photograph.
+
+CRITICAL QUALITY REQUIREMENTS:
+
+1. GARMENT PLACEMENT & FIT:
+   • Position the garment naturally on the person's body with anatomically correct placement
+   • Ensure proper sizing relative to the person's body proportions
+   • The garment should follow the contours of the body realistically
+   • Maintain appropriate fit (not too tight or too loose unless the garment style requires it)
+
+2. FABRIC REALISM:
+   • Render realistic fabric draping, folds, and wrinkles based on the material type
+   • Show natural fabric behavior (stretch, flow, structure) appropriate to the garment
+   • Include subtle shadows in fabric folds for depth
+   • Preserve exact fabric texture from the original garment image
+
+3. COLOR & PATTERN ACCURACY:
+   • Match colors EXACTLY from the garment image - no color shifts or alterations
+   • Preserve all patterns, prints, or graphics with pixel-perfect accuracy
+   • Maintain color saturation and tone of the original garment
+
+4. LIGHTING & INTEGRATION:
+   • Match the lighting direction, intensity, and color temperature from the model image
+   • Create realistic shadows where the garment interacts with the body
+   • Add natural highlights on fabric surfaces based on the lighting
+   • Ensure seamless integration - the garment should appear lit by the same light source as the person
+
+5. PRESERVATION OF MODEL:
+   • Keep the person's pose EXACTLY as shown in the original image
+   • Preserve all facial features, expression, skin tone, and hair unchanged
+   • Maintain body proportions and positioning identically
+   • Do not alter or modify the person in any way
+
+6. BACKGROUND:
+   • Keep the entire background completely unchanged from the model image
+   • Preserve all background elements, colors, and details exactly
+
+7. PHOTOREALISM:
+   • The final image must be indistinguishable from a real photograph
+   • No artificial or digital-looking elements
+   • Natural depth of field and focus
+   • Professional photography quality
+
+WHAT TO AVOID:
+• Do not make the garment look "pasted on" or superimposed
+• Avoid unrealistic fabric stiffness or floating garments
+• No visible seams or boundaries between person and garment
+• No color mismatches or lighting inconsistencies
+• Do not alter the person's body, pose, or facial features
+
+OUTPUT: A single photorealistic image that looks like it was captured by a professional photographer, where the person is naturally wearing the specified garment.`;
+    } else {
+        // Original prompt for gemini-2.5-flash-image
+        return `Create a highly realistic, photo-quality virtual try-on image showing the person from the model image wearing the garment from the garment image.
+
+GARMENT DETAILS:
+${garmentDescription}
+
+CRITICAL REQUIREMENTS:
+- Naturally place and fit the garment on the person's body with proper sizing and proportions
+- Ensure realistic draping, wrinkles, and fabric behavior based on the garment type and material
+- Match lighting, shadows, and highlights to integrate the garment seamlessly with the model
+- Preserve the exact colors, patterns, textures, and all design details of the garment
+- Maintain the person's original pose, facial features, skin tone, and body proportions exactly
+- Keep the background completely unchanged
+- Ensure the garment looks like it's actually being worn, not superimposed
+- Create natural shadows and depth where the garment interacts with the body
+- Make the result indistinguishable from a real photograph`;
+    }
+};
+
 const generatePrompt = async (garmentImagePart) => {
     const model = textVisionModel;
     const prompt = `Analyze this garment image and provide a detailed description including:
@@ -203,6 +288,7 @@ Provide a comprehensive, measurement-focused technical description that ensures 
 const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) => {
   console.log('========================================');
   console.log('🎨 GENERATING INITIAL IMAGE');
+  console.log(`Using model: ${imageEditingModel}`);
   console.log('========================================');
 
   // First, get a detailed description of the garment using Gemini 2.5 Pro
@@ -210,25 +296,9 @@ const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) 
   const garmentDescription = await generatePrompt(garmentImagePart);
   console.log('✅ Garment description:', garmentDescription);
 
-  // Add the garment description to the user prompt instead of using systemInstruction
-  // (some image models may not support systemInstruction)
-  const enhancedTextPart = {
-    text: `Create a highly realistic, photo-quality virtual try-on image showing the person from the model image wearing the garment from the garment image.
-
-GARMENT DETAILS:
-${garmentDescription}
-
-CRITICAL REQUIREMENTS:
-- Naturally place and fit the garment on the person's body with proper sizing and proportions
-- Ensure realistic draping, wrinkles, and fabric behavior based on the garment type and material
-- Match lighting, shadows, and highlights to integrate the garment seamlessly with the model
-- Preserve the exact colors, patterns, textures, and all design details of the garment
-- Maintain the person's original pose, facial features, skin tone, and body proportions exactly
-- Keep the background completely unchanged
-- Ensure the garment looks like it's actually being worn, not superimposed
-- Create natural shadows and depth where the garment interacts with the body
-- Make the result indistinguishable from a real photograph`
-  };
+  // Use model-specific prompt
+  const promptText = getVirtualTryOnPrompt(garmentDescription, imageEditingModel);
+  const enhancedTextPart = { text: promptText };
 
   console.log('📤 Sending request to image model...');
   const aiClient = getAIClientForModel(imageEditingModel);
@@ -248,6 +318,7 @@ const generateInitialImageVariations = async (modelImagePart, garmentImagePart, 
   console.log('========================================');
   console.log('🎨 GENERATING INITIAL IMAGE VARIATIONS');
   console.log(`Generating ${count} variations...`);
+  console.log(`Using model: ${imageEditingModel}`);
   console.log('========================================');
 
   // First, get a detailed description of the garment using Gemini 2.5 Pro
@@ -255,24 +326,9 @@ const generateInitialImageVariations = async (modelImagePart, garmentImagePart, 
   const garmentDescription = await generatePrompt(garmentImagePart);
   console.log('✅ Garment description:', garmentDescription);
 
-  // Create enhanced text part with garment description
-  const enhancedTextPart = {
-    text: `Create a highly realistic, photo-quality virtual try-on image showing the person from the model image wearing the garment from the garment image.
-
-GARMENT DETAILS:
-${garmentDescription}
-
-CRITICAL REQUIREMENTS:
-- Naturally place and fit the garment on the person's body with proper sizing and proportions
-- Ensure realistic draping, wrinkles, and fabric behavior based on the garment type and material
-- Match lighting, shadows, and highlights to integrate the garment seamlessly with the model
-- Preserve the exact colors, patterns, textures, and all design details of the garment
-- Maintain the person's original pose, facial features, skin tone, and body proportions exactly
-- Keep the background completely unchanged
-- Ensure the garment looks like it's actually being worn, not superimposed
-- Create natural shadows and depth where the garment interacts with the body
-- Make the result indistinguishable from a real photograph`
-  };
+  // Use model-specific prompt
+  const promptText = getVirtualTryOnPrompt(garmentDescription, imageEditingModel);
+  const enhancedTextPart = { text: promptText };
 
   // Generate multiple variations in parallel
   const aiClient = getAIClientForModel(imageEditingModel);
