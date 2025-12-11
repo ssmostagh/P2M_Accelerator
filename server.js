@@ -125,69 +125,23 @@ const processApiResponse = (response) => {
 
 // Helper function to generate model-specific virtual try-on prompts
 const getVirtualTryOnPrompt = (garmentDescription, modelName) => {
-    // Gemini 3.0 Pro benefits from more structured, detailed prompts
+    // Gemini 3.0 Pro - trying a more concise, direct approach
     if (modelName === 'gemini-3.0-pro-image-preview') {
-        return `You are an expert fashion photographer and virtual try-on specialist. Your task is to create a photorealistic image of the person wearing the specified garment.
+        return `Generate a photorealistic image of the person from the first image wearing the garment from the second image.
 
-INPUT IMAGES:
-1. Model Image: Shows a person in their current outfit
-2. Garment Image: Shows the garment to be virtually tried on
-
-GARMENT TO APPLY:
+GARMENT DESCRIPTION:
 ${garmentDescription}
 
-YOUR TASK:
-Create a single, photorealistic image where the person from the model image is wearing the garment from the garment image. This must look like a professional fashion photograph.
+REQUIREMENTS:
+- Place the garment naturally on the person's body with correct fit and proportions
+- Replicate exact colors, patterns, and textures from the garment image
+- Match all lighting, shadows, and highlights from the model image
+- Realistic fabric draping, wrinkles, and material behavior
+- Preserve the person's exact pose, face, skin tone, hair, and body shape
+- Keep background completely unchanged
+- Make it look like a real photograph, not a digital composite
 
-CRITICAL QUALITY REQUIREMENTS:
-
-1. GARMENT PLACEMENT & FIT:
-   • Position the garment naturally on the person's body with anatomically correct placement
-   • Ensure proper sizing relative to the person's body proportions
-   • The garment should follow the contours of the body realistically
-   • Maintain appropriate fit (not too tight or too loose unless the garment style requires it)
-
-2. FABRIC REALISM:
-   • Render realistic fabric draping, folds, and wrinkles based on the material type
-   • Show natural fabric behavior (stretch, flow, structure) appropriate to the garment
-   • Include subtle shadows in fabric folds for depth
-   • Preserve exact fabric texture from the original garment image
-
-3. COLOR & PATTERN ACCURACY:
-   • Match colors EXACTLY from the garment image - no color shifts or alterations
-   • Preserve all patterns, prints, or graphics with pixel-perfect accuracy
-   • Maintain color saturation and tone of the original garment
-
-4. LIGHTING & INTEGRATION:
-   • Match the lighting direction, intensity, and color temperature from the model image
-   • Create realistic shadows where the garment interacts with the body
-   • Add natural highlights on fabric surfaces based on the lighting
-   • Ensure seamless integration - the garment should appear lit by the same light source as the person
-
-5. PRESERVATION OF MODEL:
-   • Keep the person's pose EXACTLY as shown in the original image
-   • Preserve all facial features, expression, skin tone, and hair unchanged
-   • Maintain body proportions and positioning identically
-   • Do not alter or modify the person in any way
-
-6. BACKGROUND:
-   • Keep the entire background completely unchanged from the model image
-   • Preserve all background elements, colors, and details exactly
-
-7. PHOTOREALISM:
-   • The final image must be indistinguishable from a real photograph
-   • No artificial or digital-looking elements
-   • Natural depth of field and focus
-   • Professional photography quality
-
-WHAT TO AVOID:
-• Do not make the garment look "pasted on" or superimposed
-• Avoid unrealistic fabric stiffness or floating garments
-• No visible seams or boundaries between person and garment
-• No color mismatches or lighting inconsistencies
-• Do not alter the person's body, pose, or facial features
-
-OUTPUT: A single photorealistic image that looks like it was captured by a professional photographer, where the person is naturally wearing the specified garment.`;
+The garment should look naturally worn, not superimposed. Maintain photographic realism throughout.`;
     } else {
         // Original prompt for gemini-2.5-flash-image
         return `Create a highly realistic, photo-quality virtual try-on image showing the person from the model image wearing the garment from the garment image.
@@ -302,12 +256,21 @@ const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) 
 
   console.log('📤 Sending request to image model...');
   const aiClient = getAIClientForModel(imageEditingModel);
+
+  // Model-specific config
+  const generationConfig = {
+    responseModalities: [Modality.IMAGE, Modality.TEXT],
+  };
+
+  // Add temperature for gemini-3.0-pro-image-preview to increase creativity/quality
+  if (imageEditingModel === 'gemini-3.0-pro-image-preview') {
+    generationConfig.temperature = 1.0; // Higher temperature for more variation
+  }
+
   const response = await aiClient.models.generateContent({
     model: imageEditingModel,
     contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
-    config: {
-      responseModalities: [Modality.IMAGE, Modality.TEXT],
-    },
+    config: generationConfig,
   });
 
   console.log('✅ Got response from Gemini API');
@@ -332,15 +295,24 @@ const generateInitialImageVariations = async (modelImagePart, garmentImagePart, 
 
   // Generate multiple variations in parallel
   const aiClient = getAIClientForModel(imageEditingModel);
+
+  // Model-specific config
+  const generationConfig = {
+    responseModalities: [Modality.IMAGE, Modality.TEXT],
+  };
+
+  // Add temperature for gemini-3.0-pro-image-preview
+  if (imageEditingModel === 'gemini-3.0-pro-image-preview') {
+    generationConfig.temperature = 1.0; // Higher temperature for more variation
+  }
+
   const generationPromises = [];
   for (let i = 0; i < count; i++) {
     console.log(`📤 Starting generation ${i + 1}/${count}...`);
     const promise = aiClient.models.generateContent({
       model: imageEditingModel,
       contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
-      config: {
-        responseModalities: [Modality.IMAGE, Modality.TEXT],
-      },
+      config: generationConfig,
     }).then(response => {
       console.log(`✅ Completed generation ${i + 1}/${count}`);
       return processApiResponse(response);
