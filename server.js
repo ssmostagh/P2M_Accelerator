@@ -31,12 +31,42 @@ if (!project) {
 }
 
 console.log(`Using project ID: ${project}`);
-console.log(`Using location: ${location}`);
-const ai = new GoogleGenAI({
-    vertexai: true,
-    project: project,
-    location: location
-});
+console.log(`Using default location: ${location}`);
+
+// Model-to-region mapping
+// Models that require specific regions override the default
+const MODEL_REGIONS = {
+    'gemini-3.0-pro-image-preview': 'global',
+    // Add other model-specific regions here as needed
+    // All other models will use the default location from environment variables
+};
+
+// Function to get the appropriate region for a model
+const getRegionForModel = (modelName) => {
+    return MODEL_REGIONS[modelName] || location;
+};
+
+// Cache of AI clients by region to avoid recreating them
+const aiClients = {};
+
+// Function to get or create an AI client for a specific model
+const getAIClientForModel = (modelName) => {
+    const modelRegion = getRegionForModel(modelName);
+
+    if (!aiClients[modelRegion]) {
+        console.log(`Creating AI client for region: ${modelRegion}`);
+        aiClients[modelRegion] = new GoogleGenAI({
+            vertexai: true,
+            project: project,
+            location: modelRegion
+        });
+    }
+
+    return aiClients[modelRegion];
+};
+
+// Initialize default AI client for backward compatibility
+const ai = getAIClientForModel('default');
 
 // Initialize Google Cloud Storage
 const storage = new Storage({ project: project });
@@ -52,7 +82,7 @@ const auth = new GoogleAuth({
 
 const imageEditingModel = 'gemini-2.5-flash-image'; // old model
 //const imageEditingModel = 'gemini-3.0-pro-image-preview';
-const textVisionModel = 'gemini-2.5-pro'; // For garment description
+const textVisionModel = 'gemini-2.5-pro-ga'; // For garment description
 const videoModel = 'veo-3.1-generate-preview';
 
 const dataUrlToGenerativePart = (dataUrl) => {
@@ -106,7 +136,8 @@ const generatePrompt = async (garmentImagePart) => {
 
 Provide a comprehensive description that would help recreate this garment accurately in a virtual try-on.`;
 
-    const response = await ai.models.generateContent({
+    const aiClient = getAIClientForModel(model);
+    const response = await aiClient.models.generateContent({
         model: model,
         contents: { role: 'user', parts: [ { text: prompt }, garmentImagePart ] },
     });
@@ -158,7 +189,8 @@ DESIGN ELEMENTS:
 Provide a comprehensive, measurement-focused technical description that ensures consistency between front and back views. Be specific about lengths, widths, and placement of all elements.`;
 
     console.log('📤 Sending sketch to Gemini 2.5 Pro for analysis...');
-    const response = await ai.models.generateContent({
+    const aiClient = getAIClientForModel(model);
+    const response = await aiClient.models.generateContent({
         model: model,
         contents: { role: 'user', parts: [ { text: prompt }, sketchImagePart ] },
     });
@@ -199,7 +231,8 @@ CRITICAL REQUIREMENTS:
   };
 
   console.log('📤 Sending request to image model...');
-  const response = await ai.models.generateContent({
+  const aiClient = getAIClientForModel(imageEditingModel);
+  const response = await aiClient.models.generateContent({
     model: imageEditingModel,
     contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
     config: {
@@ -242,10 +275,11 @@ CRITICAL REQUIREMENTS:
   };
 
   // Generate multiple variations in parallel
+  const aiClient = getAIClientForModel(imageEditingModel);
   const generationPromises = [];
   for (let i = 0; i < count; i++) {
     console.log(`📤 Starting generation ${i + 1}/${count}...`);
-    const promise = ai.models.generateContent({
+    const promise = aiClient.models.generateContent({
       model: imageEditingModel,
       contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
       config: {
@@ -264,7 +298,8 @@ CRITICAL REQUIREMENTS:
 };
 
 const editImage = async (imagePart, textPart) => {
-  const response = await ai.models.generateContent({
+  const aiClient = getAIClientForModel(imageEditingModel);
+  const response = await aiClient.models.generateContent({
     model: imageEditingModel,
     contents: { role: 'user', parts: [imagePart, textPart] },
     config: {
@@ -548,8 +583,10 @@ const regenerateColor = async (currentColorName, themePrompt, direction) => {
 const rewritePrompt = async (originalPrompt) => {
     const metaPrompt = `You are a creative assistant for a fashion designer. Rewrite and enhance the following image prompt to generate a more visually compelling and detailed photograph for a fashion moodboard. Keep the core concepts but add artistic details. Return only the new prompt text, without any surrounding quotes or explanations. Prompt to rewrite: "${originalPrompt}"`;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+    const model = 'gemini-2.5-flash';
+    const aiClient = getAIClientForModel(model);
+    const response = await aiClient.models.generateContent({
+        model: model,
         contents: { role: 'user', parts: [{ text: metaPrompt }] },
     });
 
@@ -617,11 +654,12 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
         console.log('   - Combined Rendering (Front + Back)');
         console.log('   - Combined Technical Flat (Front + Back)');
 
+        const aiClient = getAIClientForModel(model);
         let renderingCombinedResult, flatCombinedResult;
         try {
             [renderingCombinedResult, flatCombinedResult] = await Promise.all([
-                ai.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: commonConfig }),
-                ai.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: flatCombinedPrompt }] }, config: commonConfig })
+                aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: commonConfig }),
+                aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: flatCombinedPrompt }] }, config: commonConfig })
             ]);
             console.log('✅ Both API calls completed successfully');
         } catch (error) {
@@ -684,8 +722,9 @@ const regenerateTechPackRendering = async (frontImageDataUrl, backImageDataUrl =
 
         const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT, with small gap. Both same size, aligned. ${commonRenderingSuffix}${consistencyRequirements}${feedbackSection}`;
 
+        const aiClient = getAIClientForModel(model);
         const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
-        const renderingResult = await ai.models.generateContent({
+        const renderingResult = await aiClient.models.generateContent({
             model,
             contents: { role: 'user', parts: [imagePartForPrompts, { text: renderingCombinedPrompt }] },
             config: commonConfig
@@ -719,8 +758,9 @@ const regenerateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null
 
         const flatCombinedPrompt = `Generate ONE technical flat showing BOTH front AND back views side by side. Front on LEFT, back on RIGHT, small gap. Both same size, aligned. ${commonFlatSuffix}${consistencyRequirements}${feedbackSection}`;
 
+        const aiClient = getAIClientForModel(model);
         const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
-        const flatResult = await ai.models.generateContent({
+        const flatResult = await aiClient.models.generateContent({
             model,
             contents: { role: 'user', parts: [imagePartForPrompts, { text: flatCombinedPrompt }] },
             config: commonConfig
