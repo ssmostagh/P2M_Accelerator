@@ -90,11 +90,76 @@ gcloud auth application-default login
 
 This creates credentials that the application will use to access Google Cloud services.
 
-### 4. Set Required Permissions
+### 4. Service Account Setup and Permissions
 
-Ensure your account or service account has the following roles:
+This application requires specific Google Cloud permissions to function properly. You can either use your personal account or create a dedicated service account.
+
+#### Option A: Using Your Personal Account
+
+If running locally with your own credentials:
+
+```bash
+gcloud auth application-default login
+```
+
+Ensure your account has the following roles:
 - `roles/aiplatform.user` - For Vertex AI API access
 - `roles/storage.objectAdmin` - For GCS bucket access
+
+#### Option B: Using a Service Account (Recommended for Production)
+
+1. **Create a service account**:
+
+```bash
+gcloud iam service-accounts create p2m-accelerator-sa \
+  --display-name="P2M Accelerator Service Account" \
+  --project=your-project-id
+```
+
+2. **Grant required IAM roles**:
+
+```bash
+# Grant Vertex AI User role (for Gemini and Veo models)
+gcloud projects add-iam-policy-binding your-project-id \
+  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+
+# Grant Storage Object Admin role (for video generation storage)
+gcloud projects add-iam-policy-binding your-project-id \
+  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+```
+
+3. **Create and download service account key**:
+
+```bash
+gcloud iam service-accounts keys create ./service-account-key.json \
+  --iam-account=p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com
+```
+
+4. **Set the credentials environment variable**:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="./service-account-key.json"
+```
+
+Or add to your `.env` file:
+```env
+GOOGLE_APPLICATION_CREDENTIALS=./service-account-key.json
+```
+
+#### Required Permissions Summary
+
+| Role | Purpose | Permissions Included |
+|------|---------|---------------------|
+| `roles/aiplatform.user` | Access Vertex AI models (Gemini 2.5 Flash, Gemini 2.5 Pro, Veo 3.1) | `aiplatform.endpoints.predict`<br>`aiplatform.models.get`<br>`aiplatform.models.list` |
+| `roles/storage.objectAdmin` | Read/write access to GCS bucket for video storage | `storage.objects.create`<br>`storage.objects.delete`<br>`storage.objects.get`<br>`storage.objects.list` |
+
+**Security Best Practices**:
+- Never commit service account keys to version control
+- Add `service-account-key.json` to your `.gitignore`
+- For production deployments, use Workload Identity or service account impersonation instead of key files
+- Rotate service account keys regularly
 
 ## Installation
 
