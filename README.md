@@ -113,44 +113,23 @@ Ensure your account has the following roles:
 - `roles/storage.objectUser` - For reading/writing objects in GCS bucket
 - `roles/aiplatform.user` - For Vertex AI API access
 
-#### Option B: Using a Service Account (Recommended for Production)
+#### Option B: Using the Default Compute Service Account (Recommended for Production)
 
-1. **Create a service account**:
-
-```bash
-gcloud iam service-accounts create p2m-accelerator-sa \
-  --display-name="P2M Accelerator Service Account" \
-  --project=your-project-id
-```
-
-2. **Grant required IAM roles**:
+The application uses the default Compute Engine service account. Grant it the required IAM roles:
 
 ```bash
-# Grant all required roles in one command
+# Get your project number
+PROJECT_NUMBER=$(gcloud projects describe your-project-id --format="value(projectNumber)")
+
+# Grant all required roles to the default compute service account
 for role in run.invoker logging.admin storage.objectCreator storage.objectUser aiplatform.user; do
   gcloud projects add-iam-policy-binding your-project-id \
-    --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
     --role="roles/$role"
 done
 ```
 
-3. **Create and download service account key**:
-
-```bash
-gcloud iam service-accounts keys create ./service-account-key.json \
-  --iam-account=p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com
-```
-
-4. **Set the credentials environment variable**:
-
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS="./service-account-key.json"
-```
-
-Or add to your `.env` file:
-```env
-GOOGLE_APPLICATION_CREDENTIALS=./service-account-key.json
-```
+The default compute service account (`PROJECT_NUMBER-compute@developer.gserviceaccount.com`) is automatically used when deploying to Cloud Run or Compute Engine. For local development, use Option A with `gcloud auth application-default login`.
 
 #### Required Permissions Summary
 
