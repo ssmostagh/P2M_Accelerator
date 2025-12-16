@@ -28,11 +28,14 @@ A comprehensive fashion design platform powered by Google's Gemini AI, featuring
 
 - **Sketch-to-Tech Pack**: Transform hand-drawn sketches into professional technical illustrations
 - **AI Analysis**: Automatic garment analysis with detailed proportions and measurements
-- **Dual Output**: Generate both photorealistic renderings and technical flats
+- **Workflow-Based Generation**: Step-by-step process with selection at each stage for optimal results
+- **Two-Step Flat Generation**: Front view generated first, then used as reference for back view to ensure consistency
+- **4-Variation Selection**: Choose from 4 AI-generated variations at both flat and rendering stages
+- **Generation History**: Track all generations with timestamps and restore any previous version
+- **Annotated Tech Packs**: Automatically generate annotated technical flats with measurement callouts
+- **Smart Annotation Regeneration**: Annotations auto-update when flat changes, or regenerate independently
 - **Combined Views**: Front and back views generated side-by-side in single images
-- **Regeneration with Feedback**: Regenerate specific images with custom feedback for iterative refinement
-- **Consistency Control**: Built-in consistency requirements ensure front and back views match
-- **Factory-Ready Flats**: Technical flats suitable for manufacturer production with proper line weights and details
+- **Factory-Ready Flats**: Technical flats with proper line weights suitable for manufacturer production
 - **Multiple Upload Options**: Support for separate front/back sketches or combined front+back images
 
 ## Technology Stack
@@ -308,27 +311,45 @@ P2M_Accelerator/
 
 ### Tech Illustration
 
+The Tech Illustration workflow guides you through a step-by-step process to generate professional tech packs:
+
+#### Step 1: Upload & Analyze
 1. **Upload Sketch(es)**:
    - Upload a front view sketch (required)
    - Optionally upload a separate back view sketch
    - Or check "Front image includes both front and back views" if using a combined sketch
-2. **Generate Tech Pack**: Click "Generate" to create AI-powered technical illustrations
-3. **AI Processing**:
-   - AI analyzes your sketch for garment details, proportions, and measurements
-   - Generates photorealistic rendering with front and back views side-by-side
-   - Generates technical flat with front and back views side-by-side
-4. **Review Results**: View three cards:
+2. **Generate**: Click "Generate" to start the AI analysis
+3. **AI Analysis**: AI analyzes your sketch for garment details, proportions, and measurements
+
+#### Step 2: Select Technical Flat
+1. **Review 4 Variations**: AI generates 4 technical flat variations using a two-step process:
+   - Front view generated first with proper technical illustration standards
+   - Back view generated using front as reference for consistency
+2. **View Generation History**: Access previous generations via the history sidebar
+3. **Select Preferred Variation**: Click on your preferred flat variation
+4. **Regenerate** (Optional): Click "Regenerate" for 4 new variations if desired
+5. **Continue**: Click "Continue with Variation X" to proceed
+
+#### Step 3: Select Rendering
+1. **Review 4 Rendering Variations**: AI generates 4 photorealistic rendering options
+2. **View Generation History**: Track and restore previous rendering generations
+3. **Select Preferred Rendering**: Click on your preferred rendering
+4. **Regenerate** (Optional): Generate 4 new rendering variations if needed
+5. **Continue**: Click "Continue with Variation X" to finalize
+
+#### Step 4: Final Review & Export
+1. **Review Complete Tech Pack**:
    - Your original sketch(es)
-   - Photorealistic rendering (Front + Back)
-   - Technical flat (Front + Back)
-5. **Regenerate with Feedback** (Optional):
-   - Click "Regenerate with Feedback" on any generated image
-   - Provide specific instructions (e.g., "shoulder should have bows not leaves")
-   - Click "Generate" to create an updated version
-   - Or use the quick regenerate icon to try a different variation without changes
-6. **Preview**: Click on any image to view it in full screen
-7. **Export**: Download individual images using the download button on each card
-8. **Start Over**: Click "Start Over" to generate a new tech pack from different sketches
+   - Selected photorealistic rendering (Front + Back)
+   - Selected technical flat (Front + Back)
+   - Annotated tech pack with measurement callouts
+2. **Regenerate Options**:
+   - **Regenerate Rendering**: Creates new rendering and auto-regenerates annotations
+   - **Regenerate Technical Flat**: Creates new flat and auto-regenerates annotations
+   - **Regenerate Annotations**: Regenerates only annotations for more detailed callouts
+3. **Preview**: Click any image to view full screen
+4. **Export**: Download individual images using the download button on each card
+5. **Start Over**: Generate a new tech pack from different sketches
 
 ## Troubleshooting
 
