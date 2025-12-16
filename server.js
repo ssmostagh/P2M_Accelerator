@@ -6,6 +6,7 @@ import { Storage } from '@google-cloud/storage';
 import { GoogleAuth } from 'google-auth-library';
 import dotenv from 'dotenv';
 import { PANTONE_COLORS, getRandomPantoneColors, getComplementaryPantoneColors } from './constants/pantoneColors.js';
+import { FABRICS } from './constants/fabrics.js';
 
 dotenv.config();
 
@@ -36,7 +37,8 @@ console.log(`Using default location: ${location}`);
 // Model-to-region mapping
 // Models that require specific regions override the default
 const MODEL_REGIONS = {
-    'gemini-3.0-pro-image-preview': 'global',
+    'gemini-3-pro-image-preview': 'global',
+    'gemini-3-pro-preview': 'global',
     // Add other model-specific regions here as needed
     // All other models will use the default location from environment variables
 };
@@ -80,9 +82,72 @@ const auth = new GoogleAuth({
     scopes: ['https://www.googleapis.com/auth/cloud-platform']
 });
 
-const imageEditingModel = 'gemini-2.5-flash-image'; // old model
-//const imageEditingModel = 'gemini-3.0-pro-image-preview';
-const textVisionModel = 'gemini-2.5-pro'; // For garment description
+// --- Fabric Library Management ---
+// Cache for fabric data with TTL (time-to-live)
+let fabricCache = {
+    data: null,
+    timestamp: null,
+    ttl: 5 * 60 * 1000, // 5 minutes in milliseconds
+};
+
+// Function to load fabrics from GCS with fallback to local FABRICS
+const loadFabrics = async () => {
+    console.log('🎨 Loading fabric library...');
+
+    // Check if cache is still valid
+    if (fabricCache.data && fabricCache.timestamp && (Date.now() - fabricCache.timestamp < fabricCache.ttl)) {
+        console.log('✅ Using cached fabric library');
+        return fabricCache.data;
+    }
+
+    try {
+        // Try to load fabrics from GCS bucket
+        const fabricsFolder = 'fabrics'; // Folder in GCS bucket for fabric data
+        const bucket = storage.bucket(bucketName);
+        const file = bucket.file(`${fabricsFolder}/fabrics.json`);
+
+        console.log(`📦 Attempting to load fabrics from GCS: gs://${bucketName}/${fabricsFolder}/fabrics.json`);
+
+        const [exists] = await file.exists();
+
+        if (exists) {
+            console.log('📥 Downloading fabrics from GCS...');
+            const [contents] = await file.download();
+            const gcsFabrics = JSON.parse(contents.toString());
+
+            // Validate that GCS data is not empty
+            if (gcsFabrics && Array.isArray(gcsFabrics) && gcsFabrics.length > 0) {
+                console.log(`✅ Loaded ${gcsFabrics.length} fabrics from GCS bucket`);
+
+                // Cache the GCS fabrics
+                fabricCache.data = gcsFabrics;
+                fabricCache.timestamp = Date.now();
+
+                return gcsFabrics;
+            } else {
+                console.log('⚠️  GCS fabrics.json exists but is empty, falling back to local fabric library');
+            }
+        } else {
+            console.log('⚠️  No fabrics.json found in GCS bucket, using local fabric library');
+        }
+    } catch (error) {
+        console.log('⚠️  Error loading fabrics from GCS, falling back to local fabric library');
+        console.log('Error details:', error.message);
+    }
+
+    // Fallback to local FABRICS
+    console.log(`✅ Using local fabric library (${FABRICS.length} fabrics)`);
+
+    // Cache the local fabrics
+    fabricCache.data = FABRICS;
+    fabricCache.timestamp = Date.now();
+
+    return FABRICS;
+};
+
+// Updated to Gemini 3 for image generation tasks
+const imageEditingModel = 'gemini-3-pro-image-preview';
+const textVisionModel = 'gemini-2.5-pro'; // For garment description and analysis
 const videoModel = 'veo-3.1-generate-preview';
 
 const dataUrlToGenerativePart = (dataUrl) => {
@@ -125,8 +190,8 @@ const processApiResponse = (response) => {
 
 // Helper function to generate model-specific virtual try-on prompts
 const getVirtualTryOnPrompt = (garmentDescription, modelName) => {
-    // Gemini 3.0 Pro - trying a more concise, direct approach
-    if (modelName === 'gemini-3.0-pro-image-preview') {
+    // Gemini 3 Pro - trying a more concise, direct approach
+    if (modelName === 'gemini-3-pro-image-preview') {
         return `Generate a photorealistic image of the person from the first image wearing the garment from the second image.
 
 GARMENT DESCRIPTION:
@@ -262,8 +327,8 @@ const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) 
     responseModalities: [Modality.IMAGE, Modality.TEXT],
   };
 
-  // Add temperature for gemini-3.0-pro-image-preview to increase creativity/quality
-  if (imageEditingModel === 'gemini-3.0-pro-image-preview') {
+  // Add temperature for gemini-3-pro-image-preview to increase creativity/quality
+  if (imageEditingModel === 'gemini-3-pro-image-preview') {
     generationConfig.temperature = 1.0; // Higher temperature for more variation
   }
 
@@ -301,8 +366,8 @@ const generateInitialImageVariations = async (modelImagePart, garmentImagePart, 
     responseModalities: [Modality.IMAGE, Modality.TEXT],
   };
 
-  // Add temperature for gemini-3.0-pro-image-preview
-  if (imageEditingModel === 'gemini-3.0-pro-image-preview') {
+  // Add temperature for gemini-3-pro-image-preview
+  if (imageEditingModel === 'gemini-3-pro-image-preview') {
     generationConfig.temperature = 1.0; // Higher temperature for more variation
   }
 
@@ -478,22 +543,30 @@ const generateColorPalette = async (title, keywords) => {
 };
 
 const generateMoodboardImage = async (prompt, aspectRatio) => {
-    const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: prompt,
+    // Using Gemini 3 Pro Image Preview for moodboard generation
+    const model = 'gemini-3-pro-image-preview';
+    const aiClient = getAIClientForModel(model);
+
+    const response = await aiClient.models.generateContent({
+        model: model,
+        contents: { role: 'user', parts: [{ text: prompt }] },
         config: {
-            numberOfImages: 1,
-            outputMimeType: 'image/jpeg',
-            aspectRatio: aspectRatio,
+            responseModalities: [Modality.IMAGE],
+            temperature: 1.0,
         },
     });
 
-    if (response.generatedImages && response.generatedImages.length > 0) {
-        const base64ImageBytes = response.generatedImages[0]?.image?.imageBytes;
-        return `data:image/jpeg;base64,${base64ImageBytes}`;
-    } else {
-        throw new Error("No image was generated.");
+    // Process the response to extract image data
+    if (response.candidates && response.candidates.length > 0) {
+        const parts = response.candidates[0]?.content?.parts || [];
+        for (const part of parts) {
+            if (part.inlineData) {
+                const { mimeType, data } = part.inlineData;
+                return `data:${mimeType};base64,${data}`;
+            }
+        }
     }
+    throw new Error("No image was generated.");
 };
 
 const regenerateColor = async (currentColorName, themePrompt, direction) => {
@@ -658,7 +731,7 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
             ? `\n\nDETAILED GARMENT ANALYSIS (Back View):\n${backDescription}\n\nUse this analysis to ensure accuracy in the generated output.`
             : frontContext; // Use front context if back description not available
 
-        const commonRenderingSuffix = "The garment should be displayed on a neutral, ghost mannequin against a clean, light gray studio background. Focus on realistic fabric texture, drape, and professional lighting. Do not include any text or watermarks.";
+        const commonRenderingSuffix = "Create a photorealistic 3D rendering of the garment displayed on a neutral, ghost mannequin against a clean, light gray studio background. The rendering must look like a high-quality product photograph with realistic fabric texture, accurate drape physics, and professional studio lighting. Use ray-traced rendering techniques for authentic material properties and lighting. Do not include any text or watermarks.";
 
         // Enhanced consistency instructions for matching front and back views
         const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
@@ -743,7 +816,7 @@ const regenerateTechPackRendering = async (frontImageDataUrl, backImageDataUrl =
         const frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
         const imagePartForPrompts = backImageDataUrl ? dataUrlToGenerativePart(backImageDataUrl) : frontImagePart;
 
-        const commonRenderingSuffix = "The garment should be displayed on a neutral, ghost mannequin against a clean, light gray studio background. Focus on realistic fabric texture, drape, and professional lighting. Do not include any text or watermarks.";
+        const commonRenderingSuffix = "Create a photorealistic 3D rendering of the garment displayed on a neutral, ghost mannequin against a clean, light gray studio background. The rendering must look like a high-quality product photograph with realistic fabric texture, accurate drape physics, and professional studio lighting. Use ray-traced rendering techniques for authentic material properties and lighting. Do not include any text or watermarks.";
         const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
 
         const feedbackSection = feedback ? `\n\nIMPORTANT FEEDBACK/CHANGES REQUESTED: ${feedback}\n\nPlease incorporate this feedback while maintaining all other aspects of the garment design.` : '';
@@ -804,6 +877,104 @@ const regenerateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null
     }
 };
 
+const generateTechPackAnnotations = async (imagePart) => {
+    // Helper to identify what needs to be annotated
+    const model = textVisionModel;
+    const prompt = `Identify the key technical components of this garment that require callouts in a manufacturing tech pack. 
+    Return a simple list of 5-8 specific items (e.g., "Ribbed Collar", "Sleeve Hem", "Side Seam Zipper", "Kangaroo Pocket", "Drawstring").
+    Focus on construction details, trims, and fasteners. Do not create full sentences, just the list of feature names.`;
+
+    const aiClient = getAIClientForModel(model);
+    const response = await aiClient.models.generateContent({
+        model: model,
+        contents: { role: 'user', parts: [{ text: prompt }, imagePart] },
+    });
+
+    return response.text;
+};
+
+const generateAnnotatedTechPack = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false) => {
+    try {
+        console.log('========================================');
+        console.log('🎨 GENERATING ANNOTATED TECH PACK');
+        console.log('========================================');
+
+        // Use Gemini 3 Pro for the complex instruction following required for annotations
+        const model = 'gemini-3-pro-image-preview';
+        console.log('Using model:', model);
+
+        const frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
+
+        // Step 1: Generate the list of annotations
+        console.log('📝 Identifying features to annotate...');
+        const annotationsList = await generateTechPackAnnotations(frontImagePart);
+        console.log('Found annotations:', annotationsList);
+
+        // Step 2: Use the "Best Prompt" from Tech Pack research
+        const bestPromptTemplate = `You are an expert **Technical Fashion Illustrator** specializing in CAD overlays. Your task is to take a provided technical sketch and overlay specific red text and arrows onto it.
+
+**INPUT DATA:**
+- **Base Image:** A technical garment drawing. **Left Half = Front View**. **Right Half = Back View**.
+- **Annotations:** {annotations}
+
+**CRITICAL MANDATE: IMAGE PRESERVATION (NON-NEGOTIABLE)**
+1.  **DO NOT REDRAW THE GARMENT.** The input image is the absolute ground truth. If the input shows a zipper, **keep the zipper** even if the text vaguely implies otherwise. Do not change lines, shading, or pixels of the garment itself.
+2.  **OVERLAY ONLY:** Your output must be the **exact original image** with ONLY red text and red arrows added on top.
+3.  **NO CROPPING:** Maintain the full canvas size.
+
+**STEP-BY-STEP PLACEMENT LOGIC:**
+
+**Step 1: Determine the View (Left vs Right)**
+-   **RULE A (The "Inside" Rule):** Any item describing the **inside** of the neck (e.g., "Main Label", "Size Label", "Neck Tape", "Back Neck Tape") must go on the **FRONT VIEW (Left)**, pointing into the open neck.
+-   **RULE B (The "Back" Rule):** Use the **BACK VIEW (Right)** *only* if the text contains explicit back-exterior terms: "Back Yoke", "Half Moon", "Back Dart", "Rear".
+-   **RULE C (Default):** All other items (Sleeves, Hems, Pockets, Side Seams, Collars) go on the **FRONT VIEW (Left)**.
+
+**Step 2: Determine the Feature (Visual Anchors)**
+Scan the text for these keywords to decide where the arrow points:
+1.  **"Sleeve" / "Cuff" / "Arm":** Point to the **Sleeve Hem** edge.
+2.  **"Rib" / "Collar" / "FKR":** Point to the **Collar Band** (neck).
+3.  **"Side" / "Vent" / "Slit":** Point to the **Side Seam** near the bottom.
+4.  **"Zipper" / "Placket":** Point to the center vertical opening.
+5.  **"Straddle" / "Shoulder":** Point to the **Shoulder Seam** (slope).
+6.  **"Bartack":** Point to a reinforcement spot (pocket corner or top of side slit).
+7.  **Generic Default (e.g., "Coverstitch", "Bendback", "SNT"):**
+    -   If text does *not* specify a location: Point to the **Bottom Hem**.
+
+**Step 3: Render**
+-   **Text:** Write the text **verbatim** (exact spelling) in RED in the nearest empty whitespace.
+-   **Arrows:** Draw a thin **RED LINE** from the text to the exact feature edge determined in Step 2.
+    -   *Crucial:* Do not cover key details of the sketch with the text itself.
+
+**EXECUTION:**
+1.  Load the Input Image. Treat it as a locked background.
+2.  Iterate through the Annotation List. Apply Rules A/B/C and Visual Anchors.
+3.  Draw the Red Overlay.
+4.  Output the final Result.`;
+
+        const finalPrompt = bestPromptTemplate.replace('{annotations}', annotationsList);
+
+        console.log('📤 Sending annotation request to Gemini...');
+        const aiClient = getAIClientForModel(model);
+        const result = await aiClient.models.generateContent({
+            model: model,
+            contents: { role: 'user', parts: [frontImagePart, { text: finalPrompt }] },
+            config: {
+                responseModalities: [Modality.IMAGE, Modality.TEXT],
+                temperature: 0.5
+            }
+        });
+
+        const annotatedImage = processApiResponse(result);
+        console.log('✅ Annotation complete');
+
+        return { annotatedImage, annotations: annotationsList };
+
+    } catch (error) {
+        console.error('❌ Error generating annotated tech pack:', error);
+        throw error;
+    }
+};
+
 const geminiService = {
     generateInitialImage,
     generateInitialImageVariations,
@@ -821,9 +992,23 @@ const geminiService = {
     generateTechPackAssets,
     regenerateTechPackRendering,
     regenerateTechPackFlat,
+    generateAnnotatedTechPack,
 };
 
-// --- API Endpoint ---
+// --- API Endpoints ---
+
+// Endpoint to get fabric library (with GCS fallback)
+app.get('/api/fabrics', async (req, res) => {
+    try {
+        const fabrics = await loadFabrics();
+        res.json({ fabrics });
+    } catch (error) {
+        console.error('Error loading fabrics:', error);
+        // Even on error, return local fabrics as fallback
+        res.json({ fabrics: FABRICS });
+    }
+});
+
 app.post('/api/gemini', async (req, res) => {
     const { func, args } = req.body;
 

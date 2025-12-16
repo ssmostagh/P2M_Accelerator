@@ -47,32 +47,46 @@ export default function TechPackPage() {
       const backDescription = backBase64 ? await analyzeTechPackSketch(backBase64) : null;
 
       // Step 2: Generate assets using the descriptions
-      setLoadingStep('Generating photorealistic renderings and technical flats...');
+      setLoadingStep('Generating photorealistic renderings, technical flats, and annotated overlays...');
 
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          func: 'generateTechPackAssets',
-          args: [frontBase64, backBase64, includesBack, frontDescription, backDescription]
+      const [assetsResponse, annotationResponse] = await Promise.all([
+        fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            func: 'generateTechPackAssets',
+            args: [frontBase64, backBase64, includesBack, frontDescription, backDescription]
+          })
+        }),
+        fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            func: 'generateAnnotatedTechPack',
+            args: [frontBase64, backBase64, includesBack]
+          })
         })
-      });
+      ]);
 
-      if (!response.ok) {
+      if (!assetsResponse.ok || !annotationResponse.ok) {
         throw new Error('Failed to generate tech illustration assets');
       }
 
       setLoadingStep('Finalizing results...');
-      const results = await response.json();
+      const assets = await assetsResponse.json();
+      const annotationData = await annotationResponse.json();
+
       console.log('📦 Received tech pack results:', {
-        hasRenderingCombined: !!results.renderingCombined,
-        hasFlatCombined: !!results.flatCombined,
-        renderingLength: results.renderingCombined?.length,
-        flatLength: results.flatCombined?.length,
-        renderingPrefix: results.renderingCombined?.substring(0, 50),
-        flatPrefix: results.flatCombined?.substring(0, 50)
+        hasRenderingCombined: !!assets.renderingCombined,
+        hasFlatCombined: !!assets.flatCombined,
+        hasAnnotatedOverlay: !!annotationData.annotatedImage
       });
-      setGeneratedImages(results);
+
+      setGeneratedImages({
+        ...assets,
+        annotatedOverlay: annotationData.annotatedImage,
+        annotations: annotationData.annotations
+      });
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
       console.error(e);
@@ -235,6 +249,9 @@ export default function TechPackPage() {
               )}
               <TechPackResultCard title="Photorealistic Rendering (Front + Back)" imageUrl={generatedImages.renderingCombined} altText="AI-generated professional rendering with front and back views" fileName="rendering-combined.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateRendering} isRegenerating={isRegeneratingRendering} />
               <TechPackResultCard title="Technical Flat (Front + Back)" imageUrl={generatedImages.flatCombined} altText="AI-generated technical flat with front and back views" fileName="technical-flat-combined.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateFlat} isRegenerating={isRegeneratingFlat} />
+              {generatedImages.annotatedOverlay && (
+                <TechPackResultCard title="Annotated Tech Pack" imageUrl={generatedImages.annotatedOverlay} altText="AI-generated annotated technical sketch with callouts" fileName="annotated-techpack.png" onPreview={setPreviewingImage} />
+              )}
             </div>
           </div>
         )}
