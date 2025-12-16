@@ -739,7 +739,9 @@ export default function TechPackPage() {
                   {uploadedImages.back && <TechPackResultCard title="Your Sketch (Back)" imageUrl={uploadedImages.back.dataUrl} altText="User's uploaded back sketch" fileName="original-sketch-back.png" onPreview={setPreviewingImage} />}
                 </>
               )}
-              <TechPackResultCard title="Photorealistic Rendering (Front + Back)" imageUrl={generatedImages.renderingCombined} altText="AI-generated professional rendering with front and back views" fileName="rendering-combined.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateRendering} isRegenerating={isRegeneratingRendering} />
+              {generatedImages.renderingCombined && (
+                <TechPackResultCard title="Photorealistic Rendering (Front + Back)" imageUrl={generatedImages.renderingCombined} altText="AI-generated professional rendering with front and back views" fileName="rendering-combined.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateRendering} isRegenerating={isRegeneratingRendering} />
+              )}
               <TechPackResultCard title="Technical Flat (Front + Back)" imageUrl={generatedImages.flatCombined} altText="AI-generated technical flat with front and back views" fileName="technical-flat-combined.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateFlat} isRegenerating={isRegeneratingFlat} />
               {generatedImages.annotatedOverlay && (
                 <TechPackResultCard title="Annotated Tech Pack" imageUrl={generatedImages.annotatedOverlay} altText="AI-generated annotated technical sketch with callouts" fileName="annotated-techpack.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateAnnotations} isRegenerating={isRegeneratingAnnotations} />

@@ -70,6 +70,8 @@ export interface TechPackUploadedImage {
 }
 
 export interface TechPackGeneratedImages {
-  renderingCombined: string;  // Single image with front + back renderings
-  flatCombined: string;        // Single image with front + back technical flats
+  renderingCombined: string | null;  // Single image with front + back renderings (null during workflow)
+  flatCombined: string;              // Single image with front + back technical flats
+  annotatedOverlay?: string;         // Annotated tech pack with measurement callouts
+  annotations?: string[];            // Array of annotation descriptions
 }
