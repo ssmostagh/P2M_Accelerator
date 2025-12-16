@@ -1,0 +1,61 @@
+graph TD
+    %% Styles
+    classDef input fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#01579b;
+    classDef component fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#e65100;
+    classDef model fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#4a148c;
+    classDef output fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#1b5e20;
+    classDef data fill:#fafafa,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray: 5 5,color:#616161;
+
+    subgraph Input_Layer [Input]
+        direction TB
+        User[User]:::input
+        Dataset[Testcase.jsonl + Images]:::input
+    end
+
+    subgraph Pipeline [Optimization Pipeline]
+        direction TB
+        Loader[Data Loader]:::component
+        Gen[Generator]:::component
+        Eval[Evaluator]:::component
+        Opt[Optimizer]:::component
+        
+        Loader -->|1. Load & Split| Train(Training Set):::data
+        Loader -->|1. Load & Split| Val(Validation Set):::data
+        
+        subgraph Training_Loop [Training Loop]
+            direction TB
+            Train -->|2. Input| Gen
+            Gen -->|3. Generate Image| Eval
+            Eval -->|4. Score & Feedback| Opt
+            Opt -->|5. Refine Prompt| Gen
+        end
+        
+        subgraph Validation_Step [Validation Step]
+            direction TB
+            Val -->|6. Validate| Gen_Val[Generator]:::component
+            Gen_Val -->|7. Generate Image| Eval_Val[Evaluator]:::component
+            Eval_Val -->|8. Log Metrics| Trace[trace.json]:::output
+        end
+    end
+
+    subgraph Output_Layer [Output]
+        direction TB
+        Trace -->|Visualize| Report[HTML Report]:::output
+        Trace -->|Plot| Metrics[Metrics Plot]:::output
+    end
+
+    subgraph Models [Models]
+        Gemini3[Gemini 3.0 Pro]:::model
+    end
+
+    User -->|Start| Loader
+    Dataset --> Loader
+    
+    Gen -.->|Gemini 3 Pro| Gemini3
+    Eval -.->|Gemini 3 Pro| Gemini3
+    Opt -.->|Gemini 3 Pro| Gemini3
+    Gen_Val -.->|Gemini 3 Pro| Gemini3
+    Eval_Val -.->|Gemini 3 Pro| Gemini3
+
+    %% Link Styles
+    linkStyle default stroke:#333,stroke-width:1px;

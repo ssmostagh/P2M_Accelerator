@@ -1,13 +1,13 @@
-# P2M Accelerator: Design Studio
+# P2M Accelerator: Micro-Trend Studio
 
-A powerful web application for virtual garment try-on, fashion design, and AI-powered moodboard creation, powered by Google's Gemini AI. This tool allows users to visualize garments on models, apply fabric changes, generate front and back views, create dynamic catwalk videos, and generate themed color palettes with image prompts for design inspiration.
+A comprehensive fashion design platform powered by Google's Gemini AI, featuring virtual garment try-on, AI-powered moodboard creation, and sketch-to-tech pack conversion. This tool enables designers to visualize garments on models, apply fabric changes, generate front and back views, create dynamic catwalk videos, generate themed color palettes, and transform hand-drawn sketches into professional technical illustrations ready for production.
 
 ## Features
 
 ### Design Studio
 
 - **Virtual Try-On**: Seamlessly place garments on model images with realistic rendering
-- **AI-Powered Design**: Generate multiple variations of designs using Gemini 2.5 Flash
+- **AI-Powered Design**: Generate multiple variations of designs using Gemini 3.0 Pro and Gemini 2.5 Flash
 - **Fabric Library**: Apply different fabric patterns and textures to garments with locally generated swatches
 - **Multi-View Generation**: Automatically generate front and back views
 - **Edit Studio**: Make iterative edits with natural language prompts
@@ -18,17 +18,32 @@ A powerful web application for virtual garment try-on, fashion design, and AI-po
 ### Moodboard AI
 
 - **Theme-Based Color Palettes**: Generate curated Pantone color palettes based on design themes and keywords
-- **Smart Color Regeneration**: Regenerate individual colors with controls for lighter, darker, or random alternatives
+- **Smart Color Regeneration**: Regenerate individual colors with controls for lighter, darker, warmer, and cooler alternatives
 - **AI Image Prompts**: Generate detailed image prompts for each color based on your theme
 - **Pantone Integration**: Access to a comprehensive Pantone color database with intelligent filtering
 - **Export & Share**: Download color palettes and image prompts in organized panels
 - **Flexible Layouts**: Choose from 4-color, 6-color, or 8-color palette layouts
+
+### Tech Illustration
+
+- **Sketch-to-Tech Pack**: Transform hand-drawn sketches into professional technical illustrations
+- **AI Analysis**: Automatic garment analysis with detailed proportions and measurements
+- **Workflow-Based Generation**: Step-by-step process with selection at each stage for optimal results
+- **Two-Step Flat Generation**: Front view generated first, then used as reference for back view to ensure consistency
+- **4-Variation Selection**: Choose from 4 AI-generated variations at both flat and rendering stages
+- **Generation History**: Track all generations with timestamps and restore any previous version
+- **Annotated Tech Packs**: Automatically generate annotated technical flats with measurement callouts using Gemini 3.0 Pro
+- **Smart Annotation Regeneration**: Annotations auto-update when flat changes, or regenerate independently
+- **Combined Views**: Front and back views generated side-by-side in single images
+- **Factory-Ready Flats**: Technical flats with proper line weights suitable for manufacturer production
+- **Multiple Upload Options**: Support for separate front/back sketches or combined front+back images
 
 ## Technology Stack
 
 - **Frontend**: React, TypeScript, Tailwind CSS, Vite
 - **Backend**: Node.js, Express
 - **AI Models**:
+  - Gemini 3.0 Pro Image Preview for moodboards and tech packs
   - Gemini 2.5 Flash for image editing
   - Gemini 2.5 Pro for garment description
   - Veo 3.1 for video generation
@@ -79,11 +94,58 @@ gcloud auth application-default login
 
 This creates credentials that the application will use to access Google Cloud services.
 
-### 4. Set Required Permissions
+### 4. Service Account Setup and Permissions
 
-Ensure your account or service account has the following roles:
+This application requires specific Google Cloud permissions to function properly. You can either use your personal account or create a dedicated service account.
+
+#### Option A: Using Your Personal Account
+
+If running locally with your own credentials:
+
+```bash
+gcloud auth application-default login
+```
+
+Ensure your account has the following roles:
+- `roles/run.invoker` - For Cloud Run service invocation
+- `roles/logging.admin` - For logging and monitoring
+- `roles/storage.objectCreator` - For creating objects in GCS bucket
+- `roles/storage.objectUser` - For reading/writing objects in GCS bucket
 - `roles/aiplatform.user` - For Vertex AI API access
-- `roles/storage.objectAdmin` - For GCS bucket access
+
+#### Option B: Using the Default Compute Service Account (Recommended for Production)
+
+The application uses the default Compute Engine service account. Grant it the required IAM roles:
+
+```bash
+# Get your project number
+PROJECT_NUMBER=$(gcloud projects describe your-project-id --format="value(projectNumber)")
+
+# Grant all required roles to the default compute service account
+for role in run.invoker logging.admin storage.objectCreator storage.objectUser aiplatform.user; do
+  gcloud projects add-iam-policy-binding your-project-id \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role="roles/$role"
+done
+```
+
+The default compute service account (`PROJECT_NUMBER-compute@developer.gserviceaccount.com`) is automatically used when deploying to Cloud Run or Compute Engine. For local development, use Option A with `gcloud auth application-default login`.
+
+#### Required Permissions Summary
+
+| Role | Purpose | Permissions Included |
+|------|---------|---------------------|
+| `roles/run.invoker` | Invoke Cloud Run services | `run.routes.invoke` |
+| `roles/logging.admin` | Write logs and monitoring data | `logging.logEntries.create`<br>`logging.logs.list`<br>`logging.sinks.create` |
+| `roles/storage.objectCreator` | Create objects in GCS bucket | `storage.objects.create` |
+| `roles/storage.objectUser` | Read and write objects in GCS bucket | `storage.objects.get`<br>`storage.objects.list`<br>`storage.objects.update` |
+| `roles/aiplatform.user` | Access Vertex AI models (Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 3 Pro, Veo 3.1) | `aiplatform.endpoints.predict`<br>`aiplatform.models.get`<br>`aiplatform.models.list` |
+
+**Security Best Practices**:
+- Never commit service account keys to version control
+- Add `service-account-key.json` to your `.gitignore`
+- For production deployments, use Workload Identity or service account impersonation instead of key files
+- Rotate service account keys regularly
 
 ## Installation
 
@@ -173,11 +235,16 @@ P2M_Accelerator/
 │   ├── VirtualTryOn.tsx
 │   ├── FabricLibrary.tsx
 │   ├── HistoryPanel.tsx
-│   └── VideoPlayerModal.tsx
+│   ├── VideoPlayerModal.tsx
+│   ├── TechPackImageUploader.tsx   # Tech illustration sketch uploader
+│   ├── TechPackResultCard.tsx      # Tech pack result display with regeneration
+│   ├── TechPackSpinner.tsx         # Loading spinner for tech pack generation
+│   └── TechPackImagePreviewModal.tsx
 ├── pages/               # Page components
-│   ├── LandingPage.tsx       # Home page with navigation
-│   ├── MicroTrendStudio.tsx  # Main Micro-Trend Studio application
-│   └── MoodboardPage.tsx     # Moodboard AI interface
+│   ├── LandingPage.tsx            # Home page with navigation
+│   ├── MicroTrendStudio.tsx       # Main Micro-Trend Studio application
+│   ├── MoodboardPage.tsx          # Moodboard AI interface
+│   └── TechIllustrationPage.tsx   # Tech Illustration/Tech Pack generator
 ├── services/            # API service layer
 │   └── geminiService.ts
 ├── constants/           # Static data and configurations
@@ -216,12 +283,34 @@ P2M_Accelerator/
 2. **Choose Layout**: Select your preferred panel layout (4, 6, or 8 colors)
 3. **Generate Palette**: Click "Generate Moodboard" to create a curated Pantone color palette
 4. **Review Colors**: Each color card displays the Pantone name, code, and hex value
-5. **Regenerate Colors**: Click on individual color cards to:
+5. **Regenerate Colors**: Hover over individual color cards to access controls:
    - Generate a lighter shade (↑ Lighter button)
    - Generate a darker shade (↓ Darker button)
-   - Get a random alternative (refresh icon)
+   - Generate a warmer tone (🔥 Warmer button)
+   - Generate a cooler tone (❄️ Cooler button)
+   - Get a theme-appropriate alternative (Smart Pick button)
 6. **View Image Prompts**: Generated AI image prompts for each color provide visual inspiration
 7. **Export**: Download the complete moodboard with all colors and prompts
+
+### Tech Illustration
+
+1. **Upload Sketch(es)**:
+   - Upload a front view sketch (required)
+   - Optionally upload a separate back view sketch
+   - Or check "Front image includes both front and back views" if using a combined sketch
+2. **Generate**: Click "Generate" to start the AI analysis
+3. **Review 4 Variations**: AI generates 4 technical flat variations using a two-step process
+4. **View Generation History**: Access previous generations via the history sidebar
+5. **Select Preferred Variation**: Click on your preferred flat variation
+6. **Select Rendering**: Review 4 photorealistic rendering options
+7. **Final Review & Export**:
+   - Review your original sketch(es), selected photorealistic rendering, selected technical flat, and annotated tech pack
+   - **Regenerate Options**:
+     - **Regenerate Rendering**: Creates new rendering and auto-regenerates annotations
+     - **Regenerate Technical Flat**: Creates new flat and auto-regenerates annotations
+     - **Regenerate Annotations**: Regenerates only annotations for more detailed callouts
+   - **Preview**: Click any image to view full screen
+   - **Export**: Download individual images using the download button on each card
 
 ## Troubleshooting
 
@@ -264,3 +353,4 @@ PORT=3000 node server.js
 ## Credits
 
 Built by: mostaghim@
+Tech Pack Annotations built by: jwortz@

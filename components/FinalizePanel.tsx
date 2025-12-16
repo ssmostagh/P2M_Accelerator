@@ -191,16 +191,19 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
                   <h4 className="text-md font-semibold text-gray-300 mb-2">Preview & Select Video</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {videoVariations.map((videoUrl, index) => (
-                      <div key={index} className="relative group">
+                      <div
+                        key={index}
+                        className="relative group cursor-pointer"
+                        onClick={() => setPreviewVideoUrl(videoUrl)}
+                      >
                         <video
                           src={videoUrl}
-                          className="w-full h-auto object-cover rounded-md cursor-pointer hover:ring-4 hover:ring-purple-500 transition-all"
-                          onClick={() => setPreviewVideoUrl(videoUrl)}
+                          className="w-full h-auto object-cover rounded-md hover:ring-4 hover:ring-purple-500 transition-all pointer-events-none"
                           muted
                           autoPlay
                           loop
                         />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-md">
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-md pointer-events-none">
                           <span className="text-white font-semibold">Click to Preview</span>
                         </div>
                       </div>

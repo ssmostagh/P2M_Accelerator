@@ -1,10 +1,17 @@
-
+<!--
+  NOTE: This file is using an importmap and a Tailwind CSS CDN script.
+  This is not the standard way to work with Vite and may cause issues.
+  Vite is designed to bundle dependencies from node_modules, and using a CDN
+  can lead to conflicts and prevent the application from loading correctly.
+  If you experience issues with the UI not loading, please consider removing
+  the importmap and the Tailwind CDN script.
+-->
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>P2M Accelerator: UFP Design Studio</title>
+    <title>P2M Accelerator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       /* Custom scrollbar for webkit browsers */
@@ -22,21 +29,57 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #6b7280; /* bg-gray-500 */
       }
+
+      /* Moodboard color scheme */
+      :root {
+        --base-900: #0a0a0f;
+        --base-800: #1a1a24;
+        --base-700: #2a2a3a;
+        --base-600: #3a3a4a;
+        --base-300: #9a9aaa;
+        --base-200: #dadadd;
+      }
+
+      .bg-base-900 {
+        background-color: var(--base-900);
+      }
+      .bg-base-800 {
+        background-color: var(--base-800);
+      }
+      .bg-base-700 {
+        background-color: var(--base-700);
+      }
+      .border-base-800 {
+        border-color: var(--base-800);
+      }
+      .border-base-700 {
+        border-color: var(--base-700);
+      }
+      .text-base-200 {
+        color: var(--base-200);
+      }
+      .text-base-300 {
+        color: var(--base-300);
+      }
+      .text-base-600 {
+        color: var(--base-600);
+      }
     </style>
     <script type="importmap">
       {
         "imports": {
           "react": "https://esm.sh/react@18.3.1",
           "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+          "react-router-dom": "https://esm.sh/react-router-dom@7.9.6",
           "@google/genai": "https://esm.sh/@google/genai@1.20.0"
         }
       }
     </script>
-    <script type="module" crossorigin src="/assets/index-6793d5b9.js"></script>
+    <script type="module" crossorigin src="/assets/index-JN6S1JO7.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index--dnxKM5D.css">
   </head>
   <body class="bg-gray-900 text-white">
     <div id="root"></div>
 
-    
   </body>
 </html>

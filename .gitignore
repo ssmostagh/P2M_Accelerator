@@ -7,6 +7,14 @@ yarn-error.log*
 # Environment variables
 .env
 
+# Service account keys (security)
+service-account-key.json
+**/service-account-*.json
+
+# Proprietary fabric library (use GCS instead)
+fabrics.json
+constants/fabrics.json
+
 # Build output
 dist/
 build/
