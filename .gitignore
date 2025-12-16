@@ -15,9 +15,6 @@ service-account-key.json
 fabrics.json
 constants/fabrics.json
 
-# Tech pack optimization data (stored in GCS bucket)
-tech_pack/
-
 # Build output
 dist/
 build/
