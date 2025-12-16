@@ -760,7 +760,7 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
             ? `\n\nFRONT VIEW ANALYSIS:\n${frontDescription}\n\nBACK VIEW ANALYSIS:\n${backDescription}`
             : frontDescription || '';
 
-        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT, with small gap. Both same size, aligned. ${commonRenderingSuffix}${consistencyRequirements}${combinedContext}`;
+        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT. CRITICAL SPACING: Leave significant white space between the two views - the gap should be AT LEAST 20% of the garment width to ensure they are clearly separated and do NOT overlap or touch. Both views must be the same size and perfectly aligned vertically. ${commonRenderingSuffix}${consistencyRequirements}${combinedContext}`;
 
         const flatCombinedPrompt = `Generate ONE technical flat showing BOTH front AND back views side by side. Front on LEFT, back on RIGHT, small gap. Both same size, aligned. ${commonFlatSuffix}${consistencyRequirements}${combinedContext}`;
 
@@ -870,7 +870,7 @@ const regenerateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null
 
         const feedbackSection = feedback ? `\n\nIMPORTANT FEEDBACK/CHANGES REQUESTED: ${feedback}\n\nPlease incorporate this feedback while maintaining all other technical flat requirements and garment consistency.` : '';
 
-        const flatCombinedPrompt = `Generate ONE technical flat showing BOTH front AND back views side by side. Front on LEFT, back on RIGHT, small gap. Both same size, aligned. ${commonFlatSuffix}${consistencyRequirements}${feedbackSection}`;
+        const flatCombinedPrompt = `Generate ONE technical flat showing BOTH front AND back views side by side. Front on LEFT, back on RIGHT. CRITICAL SPACING: Leave significant white space between the two views - the gap should be AT LEAST 20% of the garment width to ensure they are clearly separated and do NOT overlap or touch. Both views must be the same size and perfectly aligned vertically. ${commonFlatSuffix}${consistencyRequirements}${feedbackSection}`;
 
         const aiClient = getAIClientForModel(model);
         const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
@@ -935,7 +935,7 @@ const generateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null, 
             const backContext = backDescription ? `\n\nBACK VIEW ANALYSIS:\n${backDescription}` : '';
             const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The back view MUST match the front view EXACTLY in terms of: 1) Overall garment length (shoulder to hem) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Line weight and drawing style. The front and back should look like they could be sewn together to create one cohesive garment.";
 
-            const combinePrompt = `The first image shows the FRONT technical flat (which is perfect and final). Generate ONE new image showing BOTH views side by side: Put the provided FRONT view on the LEFT (copy it EXACTLY as shown), and create a matching BACK view on the RIGHT with a small gap between them. Both views must be the same size and perfectly aligned. ${commonFlatSuffix}${consistencyRequirements}${backContext}\n\nIMPORTANT: The front view (left side) must be IDENTICAL to the provided front technical flat. Only generate a new back view that matches it perfectly.`;
+            const combinePrompt = `The first image shows the FRONT technical flat (which is perfect and final). Generate ONE new image showing BOTH views side by side: Put the provided FRONT view on the LEFT (copy it EXACTLY as shown), and create a matching BACK view on the RIGHT. CRITICAL SPACING: Leave significant white space between the two views - the gap should be AT LEAST 20% of the garment width to ensure they are clearly separated and do NOT overlap or touch. Both views must be the same size and perfectly aligned vertically. ${commonFlatSuffix}${consistencyRequirements}${backContext}\n\nIMPORTANT: The front view (left side) must be IDENTICAL to the provided front technical flat. Only generate a new back view that matches it perfectly.`;
 
             const combinedResult = await aiClient.models.generateContent({
                 model,
@@ -988,7 +988,7 @@ const generateTechPackRendering = async (frontImageDataUrl, backImageDataUrl = n
 
         const commonRenderingSuffix = "Create a photorealistic 3D rendering of the garment displayed on a neutral, ghost mannequin against a clean, light gray studio background. The rendering must look like a high-quality product photograph with realistic fabric texture, accurate drape physics, and professional studio lighting. Use ray-traced rendering techniques for authentic material properties and lighting. Do not include any text or watermarks.";
 
-        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT, with small gap. Both same size, aligned. ${commonRenderingSuffix}${consistencyRequirements}${combinedContext}`;
+        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT. CRITICAL SPACING: Leave significant white space between the two views - the gap should be AT LEAST 20% of the garment width to ensure they are clearly separated and do NOT overlap or touch. Both views must be the same size and perfectly aligned vertically. ${commonRenderingSuffix}${consistencyRequirements}${combinedContext}`;
 
         // Generate 4 variations in parallel
         const aiClient = getAIClientForModel(model);
