@@ -126,30 +126,12 @@ gcloud iam service-accounts create p2m-accelerator-sa \
 2. **Grant required IAM roles**:
 
 ```bash
-# Grant Cloud Run Invoker role
-gcloud projects add-iam-policy-binding your-project-id \
-  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
-  --role="roles/run.invoker"
-
-# Grant Logging Admin role
-gcloud projects add-iam-policy-binding your-project-id \
-  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
-  --role="roles/logging.admin"
-
-# Grant Storage Object Creator role
-gcloud projects add-iam-policy-binding your-project-id \
-  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
-  --role="roles/storage.objectCreator"
-
-# Grant Storage Object User role
-gcloud projects add-iam-policy-binding your-project-id \
-  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
-  --role="roles/storage.objectUser"
-
-# Grant Vertex AI User role (for Gemini and Veo models)
-gcloud projects add-iam-policy-binding your-project-id \
-  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
-  --role="roles/aiplatform.user"
+# Grant all required roles in one command
+for role in run.invoker logging.admin storage.objectCreator storage.objectUser aiplatform.user; do
+  gcloud projects add-iam-policy-binding your-project-id \
+    --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
+    --role="roles/$role"
+done
 ```
 
 3. **Create and download service account key**:
