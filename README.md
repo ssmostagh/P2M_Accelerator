@@ -7,7 +7,7 @@ A comprehensive fashion design platform powered by Google's Gemini AI, featuring
 ### Design Studio
 
 - **Virtual Try-On**: Seamlessly place garments on model images with realistic rendering
-- **AI-Powered Design**: Generate multiple variations of designs using Gemini 2.5 Flash
+- **AI-Powered Design**: Generate multiple variations of designs using Gemini 3.0 Pro and Gemini 2.5 Flash
 - **Fabric Library**: Apply different fabric patterns and textures to garments with locally generated swatches
 - **Multi-View Generation**: Automatically generate front and back views
 - **Edit Studio**: Make iterative edits with natural language prompts
@@ -32,7 +32,7 @@ A comprehensive fashion design platform powered by Google's Gemini AI, featuring
 - **Two-Step Flat Generation**: Front view generated first, then used as reference for back view to ensure consistency
 - **4-Variation Selection**: Choose from 4 AI-generated variations at both flat and rendering stages
 - **Generation History**: Track all generations with timestamps and restore any previous version
-- **Annotated Tech Packs**: Automatically generate annotated technical flats with measurement callouts
+- **Annotated Tech Packs**: Automatically generate annotated technical flats with measurement callouts using Gemini 3.0 Pro
 - **Smart Annotation Regeneration**: Annotations auto-update when flat changes, or regenerate independently
 - **Combined Views**: Front and back views generated side-by-side in single images
 - **Factory-Ready Flats**: Technical flats with proper line weights suitable for manufacturer production
@@ -43,6 +43,7 @@ A comprehensive fashion design platform powered by Google's Gemini AI, featuring
 - **Frontend**: React, TypeScript, Tailwind CSS, Vite
 - **Backend**: Node.js, Express
 - **AI Models**:
+  - Gemini 3.0 Pro Image Preview for moodboards and tech packs
   - Gemini 2.5 Flash for image editing
   - Gemini 2.5 Pro for garment description
   - Veo 3.1 for video generation
@@ -106,8 +107,11 @@ gcloud auth application-default login
 ```
 
 Ensure your account has the following roles:
+- `roles/run.invoker` - For Cloud Run service invocation
+- `roles/logging.admin` - For logging and monitoring
+- `roles/storage.objectCreator` - For creating objects in GCS bucket
+- `roles/storage.objectUser` - For reading/writing objects in GCS bucket
 - `roles/aiplatform.user` - For Vertex AI API access
-- `roles/storage.objectAdmin` - For GCS bucket access
 
 #### Option B: Using a Service Account (Recommended for Production)
 
@@ -122,15 +126,30 @@ gcloud iam service-accounts create p2m-accelerator-sa \
 2. **Grant required IAM roles**:
 
 ```bash
+# Grant Cloud Run Invoker role
+gcloud projects add-iam-policy-binding your-project-id \
+  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
+  --role="roles/run.invoker"
+
+# Grant Logging Admin role
+gcloud projects add-iam-policy-binding your-project-id \
+  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
+  --role="roles/logging.admin"
+
+# Grant Storage Object Creator role
+gcloud projects add-iam-policy-binding your-project-id \
+  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
+  --role="roles/storage.objectCreator"
+
+# Grant Storage Object User role
+gcloud projects add-iam-policy-binding your-project-id \
+  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
+  --role="roles/storage.objectUser"
+
 # Grant Vertex AI User role (for Gemini and Veo models)
 gcloud projects add-iam-policy-binding your-project-id \
   --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
   --role="roles/aiplatform.user"
-
-# Grant Storage Object Admin role (for video generation storage)
-gcloud projects add-iam-policy-binding your-project-id \
-  --member="serviceAccount:p2m-accelerator-sa@your-project-id.iam.gserviceaccount.com" \
-  --role="roles/storage.objectAdmin"
 ```
 
 3. **Create and download service account key**:
@@ -155,8 +174,11 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account-key.json
 
 | Role | Purpose | Permissions Included |
 |------|---------|---------------------|
-| `roles/aiplatform.user` | Access Vertex AI models (Gemini 2.5 Flash, Gemini 2.5 Pro, Veo 3.1) | `aiplatform.endpoints.predict`<br>`aiplatform.models.get`<br>`aiplatform.models.list` |
-| `roles/storage.objectAdmin` | Read/write access to GCS bucket for video storage | `storage.objects.create`<br>`storage.objects.delete`<br>`storage.objects.get`<br>`storage.objects.list` |
+| `roles/run.invoker` | Invoke Cloud Run services | `run.routes.invoke` |
+| `roles/logging.admin` | Write logs and monitoring data | `logging.logEntries.create`<br>`logging.logs.list`<br>`logging.sinks.create` |
+| `roles/storage.objectCreator` | Create objects in GCS bucket | `storage.objects.create` |
+| `roles/storage.objectUser` | Read and write objects in GCS bucket | `storage.objects.get`<br>`storage.objects.list`<br>`storage.objects.update` |
+| `roles/aiplatform.user` | Access Vertex AI models (Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 3 Pro, Veo 3.1) | `aiplatform.endpoints.predict`<br>`aiplatform.models.get`<br>`aiplatform.models.list` |
 
 **Security Best Practices**:
 - Never commit service account keys to version control
@@ -311,45 +333,23 @@ P2M_Accelerator/
 
 ### Tech Illustration
 
-The Tech Illustration workflow guides you through a step-by-step process to generate professional tech packs:
-
-#### Step 1: Upload & Analyze
 1. **Upload Sketch(es)**:
    - Upload a front view sketch (required)
    - Optionally upload a separate back view sketch
    - Or check "Front image includes both front and back views" if using a combined sketch
 2. **Generate**: Click "Generate" to start the AI analysis
-3. **AI Analysis**: AI analyzes your sketch for garment details, proportions, and measurements
-
-#### Step 2: Select Technical Flat
-1. **Review 4 Variations**: AI generates 4 technical flat variations using a two-step process:
-   - Front view generated first with proper technical illustration standards
-   - Back view generated using front as reference for consistency
-2. **View Generation History**: Access previous generations via the history sidebar
-3. **Select Preferred Variation**: Click on your preferred flat variation
-4. **Regenerate** (Optional): Click "Regenerate" for 4 new variations if desired
-5. **Continue**: Click "Continue with Variation X" to proceed
-
-#### Step 3: Select Rendering
-1. **Review 4 Rendering Variations**: AI generates 4 photorealistic rendering options
-2. **View Generation History**: Track and restore previous rendering generations
-3. **Select Preferred Rendering**: Click on your preferred rendering
-4. **Regenerate** (Optional): Generate 4 new rendering variations if needed
-5. **Continue**: Click "Continue with Variation X" to finalize
-
-#### Step 4: Final Review & Export
-1. **Review Complete Tech Pack**:
-   - Your original sketch(es)
-   - Selected photorealistic rendering (Front + Back)
-   - Selected technical flat (Front + Back)
-   - Annotated tech pack with measurement callouts
-2. **Regenerate Options**:
-   - **Regenerate Rendering**: Creates new rendering and auto-regenerates annotations
-   - **Regenerate Technical Flat**: Creates new flat and auto-regenerates annotations
-   - **Regenerate Annotations**: Regenerates only annotations for more detailed callouts
-3. **Preview**: Click any image to view full screen
-4. **Export**: Download individual images using the download button on each card
-5. **Start Over**: Generate a new tech pack from different sketches
+3. **Review 4 Variations**: AI generates 4 technical flat variations using a two-step process
+4. **View Generation History**: Access previous generations via the history sidebar
+5. **Select Preferred Variation**: Click on your preferred flat variation
+6. **Select Rendering**: Review 4 photorealistic rendering options
+7. **Final Review & Export**:
+   - Review your original sketch(es), selected photorealistic rendering, selected technical flat, and annotated tech pack
+   - **Regenerate Options**:
+     - **Regenerate Rendering**: Creates new rendering and auto-regenerates annotations
+     - **Regenerate Technical Flat**: Creates new flat and auto-regenerates annotations
+     - **Regenerate Annotations**: Regenerates only annotations for more detailed callouts
+   - **Preview**: Click any image to view full screen
+   - **Export**: Download individual images using the download button on each card
 
 ## Troubleshooting
 
@@ -392,3 +392,4 @@ PORT=3000 node server.js
 ## Credits
 
 Built by: mostaghim@
+Tech Pack Annotations built by: jwortz@
