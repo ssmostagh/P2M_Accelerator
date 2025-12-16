@@ -39,6 +39,8 @@ console.log(`Using default location: ${location}`);
 const MODEL_REGIONS = {
     'gemini-3-pro-image-preview': 'global',
     'gemini-3-pro-preview': 'global',
+    'gemini-2.5-pro': 'us-central1',
+    'gemini-2.5-flash': 'us-central1',
     // Add other model-specific regions here as needed
     // All other models will use the default location from environment variables
 };
@@ -254,12 +256,23 @@ const analyzeTechPackSketch = async (sketchImagePart) => {
     console.log('🔍 ANALYZING TECH ILLUSTRATION SKETCH');
     console.log('========================================');
 
-    const model = textVisionModel;
-    const prompt = `Analyze this fashion design sketch and provide a detailed technical description including:
+    const model = 'gemini-3-pro-preview'; // Using Gemini 3 Pro for detailed technical analysis
+    const prompt = `Analyze this fashion design sketch and provide a detailed technical description of THE GARMENT ONLY.
+
+CRITICAL INSTRUCTION - GARMENT vs ACCESSORIES:
+First, identify what is the actual GARMENT (the clothing item itself) versus STYLING ACCESSORIES (items worn with the garment for styling purposes only).
+
+GARMENT = The clothing item being designed (dress, top, jacket, pants, skirt, etc.)
+ACCESSORIES TO EXCLUDE = gloves, jewelry, bags, shoes, hats, scarves, separate belts (unless integral to garment construction), watches, sunglasses, other styling props
+
+Important: If a belt, sash, or tie is ATTACHED to or PART OF the garment construction, include it. If it's a separate accessory, exclude it.
+
+YOUR TASK: Provide a technical description of ONLY THE GARMENT. Do not describe or mention any styling accessories.
 
 GARMENT IDENTIFICATION:
 - Type of garment (e.g., t-shirt, dress, jacket, pants, skirt)
 - Overall aesthetic and fashion category
+- Clearly state if any items in the sketch are styling accessories (not part of the garment)
 
 PROPORTIONS AND MEASUREMENTS (CRITICAL - be specific):
 - Overall garment length (where it falls on the body: above knee, knee-length, midi, floor-length, etc.)
@@ -736,7 +749,7 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
         // Enhanced consistency instructions for matching front and back views
         const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
 
-        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it";
+        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it 9) EXCLUDE ALL STYLING ACCESSORIES: Do not include gloves, jewelry, bags, shoes, hats, scarves, separate belts, or any other accessories - show ONLY the garment being manufactured";
 
 
         const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
@@ -852,7 +865,7 @@ const regenerateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null
         const frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
         const imagePartForPrompts = backImageDataUrl ? dataUrlToGenerativePart(backImageDataUrl) : frontImagePart;
 
-        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it";
+        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it 9) EXCLUDE ALL STYLING ACCESSORIES: Do not include gloves, jewelry, bags, shoes, hats, scarves, separate belts, or any other accessories - show ONLY the garment being manufactured";
         const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
 
         const feedbackSection = feedback ? `\n\nIMPORTANT FEEDBACK/CHANGES REQUESTED: ${feedback}\n\nPlease incorporate this feedback while maintaining all other technical flat requirements and garment consistency.` : '';
@@ -877,10 +890,140 @@ const regenerateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null
     }
 };
 
+const generateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, frontDescription = null, backDescription = null) => {
+    try {
+        console.log('========================================');
+        console.log('🎨 GENERATING TECHNICAL FLAT VARIATIONS (TWO-STEP PROCESS)');
+        console.log('Generating 4 variations for selection...');
+        console.log('========================================');
+
+        const model = imageEditingModel;
+        console.log('Using model:', model);
+
+        const frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
+        const backImagePart = backImageDataUrl ? dataUrlToGenerativePart(backImageDataUrl) : null;
+        const imagePartForBackPrompts = backImagePart ?? frontImagePart;
+
+        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it 9) EXCLUDE ALL STYLING ACCESSORIES: Do not include gloves, jewelry, bags, shoes, hats, scarves, separate belts, or any other accessories - show ONLY the garment being manufactured";
+
+        const aiClient = getAIClientForModel(model);
+        const generationConfig = {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+            temperature: 1.0 // Higher temperature for variation
+        };
+
+        // Helper function to generate a single variation using two-step process
+        const generateSingleVariation = async (variationIndex) => {
+            console.log(`\n🔹 Generating variation ${variationIndex}/4...`);
+
+            // STEP 1: Generate FRONT technical flat
+            console.log(`  Step 1: Generating front view...`);
+            const frontContext = frontDescription ? `\n\nGARMENT ANALYSIS:\n${frontDescription}` : '';
+            const frontPrompt = `Generate a technical flat illustration showing ONLY the FRONT view of this garment. ${commonFlatSuffix}${frontContext}`;
+
+            const frontResult = await aiClient.models.generateContent({
+                model,
+                contents: { role: 'user', parts: [frontImagePart, { text: frontPrompt }] },
+                config: generationConfig
+            });
+            const frontFlatDataUrl = processApiResponse(frontResult);
+            const frontFlatPart = dataUrlToGenerativePart(frontFlatDataUrl);
+            console.log(`  ✓ Front view generated`);
+
+            // STEP 2: Generate combined image with BACK view using front as reference
+            console.log(`  Step 2: Generating back view and combining...`);
+            const backContext = backDescription ? `\n\nBACK VIEW ANALYSIS:\n${backDescription}` : '';
+            const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The back view MUST match the front view EXACTLY in terms of: 1) Overall garment length (shoulder to hem) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Line weight and drawing style. The front and back should look like they could be sewn together to create one cohesive garment.";
+
+            const combinePrompt = `The first image shows the FRONT technical flat (which is perfect and final). Generate ONE new image showing BOTH views side by side: Put the provided FRONT view on the LEFT (copy it EXACTLY as shown), and create a matching BACK view on the RIGHT with a small gap between them. Both views must be the same size and perfectly aligned. ${commonFlatSuffix}${consistencyRequirements}${backContext}\n\nIMPORTANT: The front view (left side) must be IDENTICAL to the provided front technical flat. Only generate a new back view that matches it perfectly.`;
+
+            const combinedResult = await aiClient.models.generateContent({
+                model,
+                contents: { role: 'user', parts: [frontFlatPart, imagePartForBackPrompts, { text: combinePrompt }] },
+                config: generationConfig
+            });
+            const combinedDataUrl = processApiResponse(combinedResult);
+            console.log(`  ✓ Variation ${variationIndex}/4 complete (front + back combined)`);
+
+            return combinedDataUrl;
+        };
+
+        // Generate all 4 variations in parallel using two-step process
+        console.log('📸 Generating 4 technical flat variations (each uses 2-step process)...');
+        const flatVariations = await Promise.all([
+            generateSingleVariation(1),
+            generateSingleVariation(2),
+            generateSingleVariation(3),
+            generateSingleVariation(4)
+        ]);
+
+        console.log('\n✅ All 4 technical flat variations generated successfully');
+
+        return { flatVariations };
+    } catch (error) {
+        console.error('❌ TECHNICAL FLAT GENERATION FAILED:', error);
+        throw error;
+    }
+};
+
+const generateTechPackRendering = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, frontDescription = null, backDescription = null) => {
+    try {
+        console.log('========================================');
+        console.log('🎨 GENERATING PHOTOREALISTIC RENDERING VARIATIONS');
+        console.log('Generating 4 variations for selection...');
+        console.log('========================================');
+
+        const model = imageEditingModel;
+        console.log('Using model:', model);
+
+        const frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
+        const backImagePart = backImageDataUrl ? dataUrlToGenerativePart(backImageDataUrl) : null;
+        const imagePartForBackPrompts = backImagePart ?? frontImagePart;
+
+        const combinedContext = frontDescription && backDescription
+            ? `\n\nFRONT VIEW ANALYSIS:\n${frontDescription}\n\nBACK VIEW ANALYSIS:\n${backDescription}`
+            : frontDescription || '';
+
+        const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
+
+        const commonRenderingSuffix = "Create a photorealistic 3D rendering of the garment displayed on a neutral, ghost mannequin against a clean, light gray studio background. The rendering must look like a high-quality product photograph with realistic fabric texture, accurate drape physics, and professional studio lighting. Use ray-traced rendering techniques for authentic material properties and lighting. Do not include any text or watermarks.";
+
+        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT, with small gap. Both same size, aligned. ${commonRenderingSuffix}${consistencyRequirements}${combinedContext}`;
+
+        // Generate 4 variations in parallel
+        const aiClient = getAIClientForModel(model);
+        const generationConfig = {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+            temperature: 1.0 // Higher temperature for variation
+        };
+
+        console.log('📸 Generating 4 rendering variations in parallel...');
+        const results = await Promise.all([
+            aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: generationConfig }),
+            aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: generationConfig }),
+            aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: generationConfig }),
+            aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: generationConfig })
+        ]);
+
+        const renderingVariations = results.map((result, index) => {
+            const imageData = processApiResponse(result);
+            console.log(`✅ Rendering variation ${index + 1}/4 generated`);
+            return imageData;
+        });
+
+        console.log('✅ All 4 rendering variations generated successfully');
+
+        return { renderingVariations };
+    } catch (error) {
+        console.error('❌ RENDERING GENERATION FAILED:', error);
+        throw error;
+    }
+};
+
 const generateTechPackAnnotations = async (imagePart) => {
     // Helper to identify what needs to be annotated
     const model = textVisionModel;
-    const prompt = `Identify the key technical components of this garment that require callouts in a manufacturing tech pack. 
+    const prompt = `Identify the key technical components of this garment that require callouts in a manufacturing tech pack.
     Return a simple list of 5-8 specific items (e.g., "Ribbed Collar", "Sleeve Hem", "Side Seam Zipper", "Kangaroo Pocket", "Drawstring").
     Focus on construction details, trims, and fasteners. Do not create full sentences, just the list of feature names.`;
 
@@ -893,7 +1036,7 @@ const generateTechPackAnnotations = async (imagePart) => {
     return response.text;
 };
 
-const generateAnnotatedTechPack = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false) => {
+const generateAnnotatedTechPack = async (flatImageDataUrl, backImageDataUrl = null, frontIncludesBack = false) => {
     try {
         console.log('========================================');
         console.log('🎨 GENERATING ANNOTATED TECH PACK');
@@ -903,18 +1046,18 @@ const generateAnnotatedTechPack = async (frontImageDataUrl, backImageDataUrl = n
         const model = 'gemini-3-pro-image-preview';
         console.log('Using model:', model);
 
-        const frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
+        const flatImagePart = dataUrlToGenerativePart(flatImageDataUrl);
 
         // Step 1: Generate the list of annotations
         console.log('📝 Identifying features to annotate...');
-        const annotationsList = await generateTechPackAnnotations(frontImagePart);
+        const annotationsList = await generateTechPackAnnotations(flatImagePart);
         console.log('Found annotations:', annotationsList);
 
         // Step 2: Use the "Best Prompt" from Tech Pack research
-        const bestPromptTemplate = `You are an expert **Technical Fashion Illustrator** specializing in CAD overlays. Your task is to take a provided technical sketch and overlay specific red text and arrows onto it.
+        const bestPromptTemplate = `You are an expert **Technical Fashion Illustrator** specializing in CAD overlays. Your task is to take a provided technical flat illustration and overlay specific red text and arrows onto it.
 
 **INPUT DATA:**
-- **Base Image:** A technical garment drawing. **Left Half = Front View**. **Right Half = Back View**.
+- **Base Image:** A technical garment flat illustration. **Left Half = Front View**. **Right Half = Back View**.
 - **Annotations:** {annotations}
 
 **CRITICAL MANDATE: IMAGE PRESERVATION (NON-NEGOTIABLE)**
@@ -943,7 +1086,7 @@ Scan the text for these keywords to decide where the arrow points:
 **Step 3: Render**
 -   **Text:** Write the text **verbatim** (exact spelling) in RED in the nearest empty whitespace.
 -   **Arrows:** Draw a thin **RED LINE** from the text to the exact feature edge determined in Step 2.
-    -   *Crucial:* Do not cover key details of the sketch with the text itself.
+    -   *Crucial:* Do not cover key details of the illustration with the text itself.
 
 **EXECUTION:**
 1.  Load the Input Image. Treat it as a locked background.
@@ -957,7 +1100,7 @@ Scan the text for these keywords to decide where the arrow points:
         const aiClient = getAIClientForModel(model);
         const result = await aiClient.models.generateContent({
             model: model,
-            contents: { role: 'user', parts: [frontImagePart, { text: finalPrompt }] },
+            contents: { role: 'user', parts: [flatImagePart, { text: finalPrompt }] },
             config: {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
                 temperature: 0.5
@@ -990,6 +1133,8 @@ const geminiService = {
     // Tech Illustration functions
     analyzeTechPackSketch,
     generateTechPackAssets,
+    generateTechPackFlat,
+    generateTechPackRendering,
     regenerateTechPackRendering,
     regenerateTechPackFlat,
     generateAnnotatedTechPack,

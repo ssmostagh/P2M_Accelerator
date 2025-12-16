@@ -72,6 +72,4 @@ export interface TechPackUploadedImage {
 export interface TechPackGeneratedImages {
   renderingCombined: string;  // Single image with front + back renderings
   flatCombined: string;        // Single image with front + back technical flats
-  annotatedOverlay?: string;   // Image with red text overlays
-  annotations?: string;        // The list of annotations used
 }
