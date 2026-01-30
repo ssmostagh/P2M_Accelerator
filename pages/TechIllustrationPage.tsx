@@ -56,10 +56,8 @@ export default function TechPackPage() {
   // Technical Flat State
   const [selectedFlatIndex, setSelectedFlatIndex] = useState<number>(0);
   const [flatHistory, setFlatHistory] = useState<FlatHistory[]>([]);
-  const [currentFlatHistoryId, setCurrentFlatHistoryId] = useState<string | null>(null);
   const [selectedRenderingIndex, setSelectedRenderingIndex] = useState<number>(0);
   const [renderingHistory, setRenderingHistory] = useState<RenderingHistory[]>([]);
-  const [currentRenderingHistoryId, setCurrentRenderingHistoryId] = useState<string | null>(null);
 
   // Regeneration State
   const [isRegeneratingRendering, setIsRegeneratingRendering] = useState<boolean>(false);
@@ -159,14 +157,12 @@ export default function TechPackPage() {
         variations: [flatData.flatCombined],
         timestamp: Date.now()
       }]);
-      setCurrentFlatHistoryId(historyId);
 
       setRenderingHistory([{
         id: historyId,
         variations: [renderingData.renderingCombined],
         timestamp: Date.now()
       }]);
-      setCurrentRenderingHistoryId(historyId);
 
       setGeneratedImages({
         flatCombined: flatData.flatCombined,
@@ -401,10 +397,8 @@ export default function TechPackPage() {
     setGeneratedImages(null);
     setSelectedFlatIndex(0);
     setFlatHistory([]);
-    setCurrentFlatHistoryId(null);
     setSelectedRenderingIndex(0);
     setRenderingHistory([]);
-    setCurrentRenderingHistoryId(null);
     setError(null);
     setIsLoading(false);
     setLoadingStep('');
