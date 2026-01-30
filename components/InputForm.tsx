@@ -1,3 +1,19 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 
 import React from 'react';
 import type { FormState } from '../types.ts';
@@ -27,7 +43,7 @@ export function InputForm({ formState, setFormState, onSubmit, isGenerating, sho
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-10 gap-x-6 gap-y-4 items-start">
       <div className="lg:col-span-2">
-        <label htmlFor="title" className="block text-sm font-medium text-base-300 mb-2">
+        <label htmlFor="title" className="block text-sm font-medium text-gray-600 dark:text-base-300 mb-2">
           Title / Theme
         </label>
         <textarea
@@ -37,12 +53,12 @@ export function InputForm({ formState, setFormState, onSubmit, isGenerating, sho
           onChange={handleChange}
           rows={2}
           placeholder="e.g., Autumn/Winter 2025"
-          className="w-full bg-base-800 border border-base-700 rounded-md shadow-sm px-4 py-2 text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition"
+          className="w-full bg-white dark:bg-base-800 border border-gray-300 dark:border-base-700 rounded-md shadow-sm px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition"
           required
         />
       </div>
       <div className="lg:col-span-3">
-        <label htmlFor="keywords" className="block text-sm font-medium text-base-300 mb-2">
+        <label htmlFor="keywords" className="block text-sm font-medium text-gray-600 dark:text-base-300 mb-2">
           Keywords / Vibes
         </label>
         <textarea
@@ -52,12 +68,12 @@ export function InputForm({ formState, setFormState, onSubmit, isGenerating, sho
           onChange={handleChange}
           rows={2}
           placeholder="e.g., structured tailoring, dark academia, wool"
-          className="w-full bg-base-800 border border-base-700 rounded-md shadow-sm px-4 py-2 text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition"
+          className="w-full bg-white dark:bg-base-800 border border-gray-300 dark:border-base-700 rounded-md shadow-sm px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition"
           required
         />
       </div>
       <div className="lg:col-span-3">
-        <label htmlFor="audience" className="block text-sm font-medium text-base-300 mb-2">
+        <label htmlFor="audience" className="block text-sm font-medium text-gray-600 dark:text-base-300 mb-2">
           Target Audience
         </label>
         <textarea
@@ -67,7 +83,7 @@ export function InputForm({ formState, setFormState, onSubmit, isGenerating, sho
           onChange={handleChange}
           rows={2}
           placeholder="e.g., High-fashion consumers, stylists"
-          className="w-full bg-base-800 border border-base-700 rounded-md shadow-sm px-4 py-2 text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition"
+          className="w-full bg-white dark:bg-base-800 border border-gray-300 dark:border-base-700 rounded-md shadow-sm px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition"
         />
       </div>
       <div className="lg:col-span-2 self-end flex flex-col gap-2">
@@ -76,7 +92,7 @@ export function InputForm({ formState, setFormState, onSubmit, isGenerating, sho
             type="button"
             onClick={onExport}
             disabled={isExporting}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 font-semibold text-white bg-green-600 rounded-md shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-base-900 focus:ring-green-700 transition-all duration-200 ease-in-out disabled:bg-base-700 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 font-semibold text-white bg-green-600 rounded-md shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-base-900 focus:ring-green-700 transition-all duration-200 ease-in-out disabled:bg-gray-200 dark:disabled:bg-base-700 disabled:cursor-not-allowed"
             aria-label="Export moodboard as PNG"
           >
             {isExporting ? (
@@ -99,7 +115,7 @@ export function InputForm({ formState, setFormState, onSubmit, isGenerating, sho
         <button
           type="submit"
           disabled={isGenerating}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold text-white bg-brand-primary rounded-md shadow-lg hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-base-900 focus:ring-brand-secondary transition-all duration-200 ease-in-out disabled:bg-base-700 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold text-white bg-brand-primary rounded-md shadow-lg hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-base-900 focus:ring-brand-secondary transition-all duration-200 ease-in-out disabled:bg-gray-200 dark:disabled:bg-base-700 disabled:cursor-not-allowed"
           aria-label="Generate moodboard"
         >
           {isGenerating ? (

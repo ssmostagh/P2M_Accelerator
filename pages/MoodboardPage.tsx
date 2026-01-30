@@ -1,3 +1,19 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import { useState, useCallback, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { InputForm } from '../components/InputForm';
@@ -98,13 +114,15 @@ For each color, provide: 1) An accurate, real Pantone color code (e.g., "PANTONE
       const promptAssignments: string[] = [];
 
       // Shuffle all prompt categories
+      const shuffledFigures = shuffleArray(FIGURE_PROMPTS);
       const shuffledObjects = shuffleArray(OBJECT_PROMPTS);
       const shuffledScenery = shuffleArray(SCENERY_PROMPTS);
       const shuffledTextures = shuffleArray(TEXTURE_PROMPTS);
 
-      // Assign prompts with no figures - only objects, scenery, and textures
-      // 0 Figures, 4 Objects, 2 Scenery, 2 Textures = 8 total image prompts
-      promptAssignments.push(...shuffledObjects.slice(0, 4));
+      // Assign prompts including figures
+      // 2 Figures, 2 Objects, 2 Scenery, 2 Textures = 8 total image prompts
+      promptAssignments.push(...shuffledFigures.slice(0, 2));
+      promptAssignments.push(...shuffledObjects.slice(0, 2));
       promptAssignments.push(...shuffledScenery.slice(0, 2));
       promptAssignments.push(...shuffledTextures.slice(0, 2));
 
@@ -188,7 +206,7 @@ For each color, provide: 1) An accurate, real Pantone color code (e.g., "PANTONE
   }, [panels, formState.title]);
 
   return (
-    <div className="flex flex-col h-full bg-base-900 text-base-200">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-200">
       <main className="flex-1 p-4 sm:p-6 lg:p-8 min-h-0 overflow-hidden relative">
         <div ref={moodboardRef} className="h-full w-full overflow-auto">
           <MoodboardGrid
@@ -200,7 +218,7 @@ For each color, provide: 1) An accurate, real Pantone color code (e.g., "PANTONE
         </div>
       </main>
 
-      <div className="flex-shrink-0 w-full p-6 border-t border-base-800 bg-base-900/95 backdrop-blur-sm z-20">
+      <div className="flex-shrink-0 w-full p-6 border-t border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-20 transition-colors duration-200">
         <InputForm
           formState={formState}
           setFormState={setFormState}

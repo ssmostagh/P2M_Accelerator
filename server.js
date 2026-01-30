@@ -1,3 +1,19 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -16,7 +32,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json({ limit: '10mb' })); // Increase limit to handle base64 images
+app.use(express.json({ limit: '50mb' })); // Increase limit to handle base64 images
 
 // --- Gemini Service Code ---
 const project = process.env.GOOGLE_CLOUD_PROJECT;
@@ -40,7 +56,11 @@ const MODEL_REGIONS = {
     'gemini-3-pro-image-preview': 'global',
     'gemini-3-pro-preview': 'global',
     'gemini-2.5-pro': 'us-central1',
+    'gemini-2.5-pro': 'us-central1',
     'gemini-2.5-flash': 'us-central1',
+    'gemini-2.5-flash-image': 'us-central1',
+    'gemini-2.0-flash-exp': 'global',
+    'gemini-3-flash-preview': 'us-central1',
     // Add other model-specific regions here as needed
     // All other models will use the default location from environment variables
 };
@@ -175,6 +195,7 @@ const processApiResponse = (response) => {
     const parts = response.candidates?.[0]?.content?.parts || [];
     console.log(`Found ${parts.length} parts in response`);
 
+    const textParts = [];
     for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
         console.log(`Checking part ${i + 1}:`, JSON.stringify(part, null, 2));
@@ -185,8 +206,16 @@ const processApiResponse = (response) => {
             console.log('Data length:', data ? data.length : 0);
             return `data:${mimeType};base64,${data}`;
         }
+        if (part.text) {
+            textParts.push(part.text);
+        }
     }
     console.log('❌ ERROR: No image found in any parts');
+    const textContent = textParts.join('\n').trim();
+    if (textContent) {
+        console.error('⚠️ Model returned TEXT instead of IMAGE:', textContent);
+        throw new Error(`No image found. Model responded: "${textContent.slice(0, 200)}..."`);
+    }
     throw new Error('No image found in the API response.');
 };
 
@@ -245,7 +274,7 @@ Provide a comprehensive description that would help recreate this garment accura
     const aiClient = getAIClientForModel(model);
     const response = await aiClient.models.generateContent({
         model: model,
-        contents: { role: 'user', parts: [ { text: prompt }, garmentImagePart ] },
+        contents: { role: 'user', parts: [{ text: prompt }, garmentImagePart] },
     });
 
     return response.text;
@@ -309,7 +338,7 @@ Provide a comprehensive, measurement-focused technical description that ensures 
     const aiClient = getAIClientForModel(model);
     const response = await aiClient.models.generateContent({
         model: model,
-        contents: { role: 'user', parts: [ { text: prompt }, sketchImagePart ] },
+        contents: { role: 'user', parts: [{ text: prompt }, sketchImagePart] },
     });
 
     console.log('✅ Sketch analysis complete');
@@ -318,102 +347,102 @@ Provide a comprehensive, measurement-focused technical description that ensures 
 };
 
 const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) => {
-  console.log('========================================');
-  console.log('🎨 GENERATING INITIAL IMAGE');
-  console.log(`Using model: ${imageEditingModel}`);
-  console.log('========================================');
+    console.log('========================================');
+    console.log('🎨 GENERATING INITIAL IMAGE');
+    console.log(`Using model: ${imageEditingModel}`);
+    console.log('========================================');
 
-  // First, get a detailed description of the garment using Gemini 2.5 Pro
-  console.log('📝 Generating garment description with Gemini 2.5 Pro...');
-  const garmentDescription = await generatePrompt(garmentImagePart);
-  console.log('✅ Garment description:', garmentDescription);
+    // First, get a detailed description of the garment using Gemini 2.5 Pro
+    console.log('📝 Generating garment description with Gemini 2.5 Pro...');
+    const garmentDescription = await generatePrompt(garmentImagePart);
+    console.log('✅ Garment description:', garmentDescription);
 
-  // Use model-specific prompt
-  const promptText = getVirtualTryOnPrompt(garmentDescription, imageEditingModel);
-  const enhancedTextPart = { text: promptText };
+    // Use model-specific prompt
+    const promptText = getVirtualTryOnPrompt(garmentDescription, imageEditingModel);
+    const enhancedTextPart = { text: promptText };
 
-  console.log('📤 Sending request to image model...');
-  const aiClient = getAIClientForModel(imageEditingModel);
+    console.log('📤 Sending request to image model...');
+    const aiClient = getAIClientForModel(imageEditingModel);
 
-  // Model-specific config
-  const generationConfig = {
-    responseModalities: [Modality.IMAGE, Modality.TEXT],
-  };
+    // Model-specific config
+    const generationConfig = {
+        responseModalities: [Modality.IMAGE, Modality.TEXT],
+    };
 
-  // Add temperature for gemini-3-pro-image-preview to increase creativity/quality
-  if (imageEditingModel === 'gemini-3-pro-image-preview') {
-    generationConfig.temperature = 1.0; // Higher temperature for more variation
-  }
+    // Add temperature for gemini-3-pro-image-preview to increase creativity/quality
+    if (imageEditingModel === 'gemini-3-pro-image-preview') {
+        generationConfig.temperature = 1.0; // Higher temperature for more variation
+    }
 
-  const response = await aiClient.models.generateContent({
-    model: imageEditingModel,
-    contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
-    config: generationConfig,
-  });
+    const response = await aiClient.models.generateContent({
+        model: imageEditingModel,
+        contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
+        config: generationConfig,
+    });
 
-  console.log('✅ Got response from Gemini API');
-  return processApiResponse(response);
+    console.log('✅ Got response from Gemini API');
+    return processApiResponse(response);
 };
 
 const generateInitialImageVariations = async (modelImagePart, garmentImagePart, textPart, count = 4) => {
-  console.log('========================================');
-  console.log('🎨 GENERATING INITIAL IMAGE VARIATIONS');
-  console.log(`Generating ${count} variations...`);
-  console.log(`Using model: ${imageEditingModel}`);
-  console.log('========================================');
+    console.log('========================================');
+    console.log('🎨 GENERATING INITIAL IMAGE VARIATIONS');
+    console.log(`Generating ${count} variations...`);
+    console.log(`Using model: ${imageEditingModel}`);
+    console.log('========================================');
 
-  // First, get a detailed description of the garment using Gemini 2.5 Pro
-  console.log('📝 Generating garment description with Gemini 2.5 Pro...');
-  const garmentDescription = await generatePrompt(garmentImagePart);
-  console.log('✅ Garment description:', garmentDescription);
+    // First, get a detailed description of the garment using Gemini 2.5 Pro
+    console.log('📝 Generating garment description with Gemini 2.5 Pro...');
+    const garmentDescription = await generatePrompt(garmentImagePart);
+    console.log('✅ Garment description:', garmentDescription);
 
-  // Use model-specific prompt
-  const promptText = getVirtualTryOnPrompt(garmentDescription, imageEditingModel);
-  const enhancedTextPart = { text: promptText };
+    // Use model-specific prompt
+    const promptText = getVirtualTryOnPrompt(garmentDescription, imageEditingModel);
+    const enhancedTextPart = { text: promptText };
 
-  // Generate multiple variations in parallel
-  const aiClient = getAIClientForModel(imageEditingModel);
+    // Generate multiple variations in parallel
+    const aiClient = getAIClientForModel(imageEditingModel);
 
-  // Model-specific config
-  const generationConfig = {
-    responseModalities: [Modality.IMAGE, Modality.TEXT],
-  };
+    // Model-specific config
+    const generationConfig = {
+        responseModalities: [Modality.IMAGE, Modality.TEXT],
+    };
 
-  // Add temperature for gemini-3-pro-image-preview
-  if (imageEditingModel === 'gemini-3-pro-image-preview') {
-    generationConfig.temperature = 1.0; // Higher temperature for more variation
-  }
+    // Add temperature for gemini-3-pro-image-preview
+    if (imageEditingModel === 'gemini-3-pro-image-preview') {
+        generationConfig.temperature = 1.0; // Higher temperature for more variation
+    }
 
-  const generationPromises = [];
-  for (let i = 0; i < count; i++) {
-    console.log(`📤 Starting generation ${i + 1}/${count}...`);
-    const promise = aiClient.models.generateContent({
-      model: imageEditingModel,
-      contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
-      config: generationConfig,
-    }).then(response => {
-      console.log(`✅ Completed generation ${i + 1}/${count}`);
-      return processApiResponse(response);
-    });
-    generationPromises.push(promise);
-  }
+    const generationPromises = [];
+    for (let i = 0; i < count; i++) {
+        console.log(`📤 Starting generation ${i + 1}/${count}...`);
+        const promise = aiClient.models.generateContent({
+            model: imageEditingModel,
+            contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
+            config: generationConfig,
+        }).then(response => {
+            console.log(`✅ Completed generation ${i + 1}/${count}`);
+            return processApiResponse(response);
+        });
+        generationPromises.push(promise);
+    }
 
-  const results = await Promise.all(generationPromises);
-  console.log(`✅ All ${count} variations generated successfully`);
-  return results;
+    const results = await Promise.all(generationPromises);
+    console.log(`✅ All ${count} variations generated successfully`);
+    return results;
 };
 
 const editImage = async (imagePart, textPart) => {
-  const aiClient = getAIClientForModel(imageEditingModel);
-  const response = await aiClient.models.generateContent({
-    model: imageEditingModel,
-    contents: { role: 'user', parts: [imagePart, textPart] },
-    config: {
-      responseModalities: [Modality.IMAGE, Modality.TEXT],
-    },
-  });
+    const aiClient = getAIClientForModel(imageEditingModel);
+    const response = await aiClient.models.generateContent({
+        model: imageEditingModel,
+        contents: { role: 'user', parts: [imagePart, textPart] },
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
+    });
 
-  return processApiResponse(response);
+    return processApiResponse(response);
 };
 
 const generateEditVariations = async (baseImage, prompt, count = 3) => {
@@ -527,6 +556,49 @@ const generateVideoVariations = async (frontImage, count = 3) => {
     return { name: operationName };
 };
 
+// Helper to auto-select the best image from variations
+const selectBestImage = async (images, criteria) => {
+    try {
+        console.log('🏆 Analyzing variations to select the best one...');
+        console.log('🏆 Analyzing variations to select the best one...');
+        // Use Gemini 3 Flash Preview as requested
+        const model = 'gemini-3-flash-preview';
+        const aiClient = getAIClientForModel(model);
+
+        const imageParts = images.map(dataUrl => dataUrlToGenerativePart(dataUrl));
+
+        const prompt = `You are a specialized Quality Assurance AI.
+        Analyze these ${images.length} fashion illustrations.
+        
+        CRITERIA: ${criteria}
+        
+        Task: Return ONLY the index (0-${images.length - 1}) of the best image.
+        Output just the integer.`;
+
+        const response = await aiClient.models.generateContent({
+            model: model,
+            contents: { role: 'user', parts: [...imageParts, { text: prompt }] },
+            config: {
+                temperature: 0.1,
+            },
+        });
+
+        const text = response.text().trim();
+        const selectedIndex = parseInt(text, 10);
+
+        if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= images.length) {
+            console.warn(`⚠️ Invalid selection index returned: '${text}'. Defaulting to 0.`);
+            return 0;
+        }
+
+        console.log(`✅ Auto-selected variation index: ${selectedIndex}`);
+        return selectedIndex;
+    } catch (error) {
+        console.error('❌ Best image selection failed (non-fatal, defaulting to 0):', error.message);
+        return 0;
+    }
+};
+
 // --- Moodboard Functions ---
 const generateColorPalette = async (title, keywords) => {
     console.log('🎨 Generating color palette from real Pantone colors');
@@ -556,9 +628,19 @@ const generateColorPalette = async (title, keywords) => {
 };
 
 const generateMoodboardImage = async (prompt, aspectRatio) => {
-    // Using Gemini 3 Pro Image Preview for moodboard generation
-    const model = 'gemini-3-pro-image-preview';
+    // Using Gemini 2.5 Flash Image for moodboard generation (faster, good for creative iteration)
+    const model = 'gemini-2.5-flash-image';
     const aiClient = getAIClientForModel(model);
+
+    console.log(`🎨 Generating moodboard image with aspect ratio: ${aspectRatio}`);
+
+    // Clean up aspect ratio for API (ensure it's valid)
+    // Valid values for Gemini: '1:1', '3:4', '4:3', '9:16', '16:9'
+    let validAspectRatio = aspectRatio;
+    if (!['1:1', '3:4', '4:3', '9:16', '16:9'].includes(aspectRatio)) {
+        console.log(`⚠️ Invalid or missing aspect ratio '${aspectRatio}', defaulting to '1:1'`);
+        validAspectRatio = '1:1';
+    }
 
     const response = await aiClient.models.generateContent({
         model: model,
@@ -566,6 +648,7 @@ const generateMoodboardImage = async (prompt, aspectRatio) => {
         config: {
             responseModalities: [Modality.IMAGE],
             temperature: 1.0,
+            aspectRatio: validAspectRatio,
         },
     });
 
@@ -806,7 +889,7 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
         console.log('✅ TECH PACK GENERATION COMPLETE (2 combined images)');
         console.log('========================================');
 
-        return { renderingCombined, flatCombined };
+        return { renderingCombined, flatCombined, descriptions: { front: frontDescription, back: backDescription } };
     } catch (error) {
         console.error('========================================');
         console.error('❌ TECH PACK GENERATION FAILED');
@@ -818,7 +901,7 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
     }
 };
 
-const regenerateTechPackRendering = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, feedback = null) => {
+const regenerateTechPackRendering = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, feedback = null, frontDescription = null, backDescription = null) => {
     try {
         console.log('🔄 REGENERATING RENDERING ONLY');
         if (feedback) {
@@ -834,7 +917,12 @@ const regenerateTechPackRendering = async (frontImageDataUrl, backImageDataUrl =
 
         const feedbackSection = feedback ? `\n\nIMPORTANT FEEDBACK/CHANGES REQUESTED: ${feedback}\n\nPlease incorporate this feedback while maintaining all other aspects of the garment design.` : '';
 
-        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT, with small gap. Both same size, aligned. ${commonRenderingSuffix}${consistencyRequirements}${feedbackSection}`;
+        // Re-construct the lush context from the original analysis if available
+        const combinedContext = frontDescription && backDescription
+            ? `\n\nFRONT VIEW ANALYSIS:\n${frontDescription}\n\nBACK VIEW ANALYSIS:\n${backDescription}`
+            : (frontDescription ? `\n\nGARMENT ANALYSIS:\n${frontDescription}` : '');
+
+        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT, with small gap. Both same size, aligned. ${commonRenderingSuffix}${consistencyRequirements}${combinedContext}${feedbackSection}`;
 
         const aiClient = getAIClientForModel(model);
         const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
@@ -890,11 +978,11 @@ const regenerateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null
     }
 };
 
-const generateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, frontDescription = null, backDescription = null) => {
+const generateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, frontDescription = null, backDescription = null, feedback = null) => {
     try {
         console.log('========================================');
-        console.log('🎨 GENERATING TECHNICAL FLAT VARIATIONS (TWO-STEP PROCESS)');
-        console.log('Generating 4 variations for selection...');
+        console.log('🎨 GENERATING TECHNICAL FLAT (SINGLE VARIATION)');
+        if (feedback) console.log('📝 Including user feedback:', feedback);
         console.log('========================================');
 
         const model = imageEditingModel;
@@ -909,69 +997,53 @@ const generateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null, 
         const aiClient = getAIClientForModel(model);
         const generationConfig = {
             responseModalities: [Modality.IMAGE, Modality.TEXT],
-            temperature: 1.0 // Higher temperature for variation
+            temperature: 0.5 // Lower temperature for stability in single generation
         };
 
-        // Helper function to generate a single variation using two-step process
-        const generateSingleVariation = async (variationIndex) => {
-            console.log(`\n🔹 Generating variation ${variationIndex}/4...`);
+        // STEP 1: Generate FRONT technical flat
+        console.log(`  Step 1: Generating front view...`);
+        const frontContext = frontDescription ? `\n\nGARMENT ANALYSIS:\n${frontDescription}` : '';
+        const feedbackSection = feedback ? `\n\nIMPORTANT FEEDBACK/CHANGES REQUESTED: ${feedback}\n\nPlease incorporate this feedback while maintaining all other technical flat requirements.` : '';
+        const frontPrompt = `Generate a technical flat illustration showing ONLY the FRONT view of this garment. ${commonFlatSuffix}${frontContext}${feedbackSection}`;
 
-            // STEP 1: Generate FRONT technical flat
-            console.log(`  Step 1: Generating front view...`);
-            const frontContext = frontDescription ? `\n\nGARMENT ANALYSIS:\n${frontDescription}` : '';
-            const frontPrompt = `Generate a technical flat illustration showing ONLY the FRONT view of this garment. ${commonFlatSuffix}${frontContext}`;
+        const frontResult = await aiClient.models.generateContent({
+            model,
+            contents: { role: 'user', parts: [frontImagePart, { text: frontPrompt }] },
+            config: generationConfig
+        });
+        const frontFlatDataUrl = processApiResponse(frontResult);
+        const frontFlatPart = dataUrlToGenerativePart(frontFlatDataUrl);
+        console.log(`  ✓ Front view generated`);
 
-            const frontResult = await aiClient.models.generateContent({
-                model,
-                contents: { role: 'user', parts: [frontImagePart, { text: frontPrompt }] },
-                config: generationConfig
-            });
-            const frontFlatDataUrl = processApiResponse(frontResult);
-            const frontFlatPart = dataUrlToGenerativePart(frontFlatDataUrl);
-            console.log(`  ✓ Front view generated`);
+        // STEP 2: Generate combined image with BACK view using front as reference
+        console.log(`  Step 2: Generating back view and combining...`);
+        const backContext = backDescription ? `\n\nBACK VIEW ANALYSIS:\n${backDescription}` : '';
+        const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The back view MUST match the front view EXACTLY in terms of: 1) Overall garment length (shoulder to hem) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Line weight and drawing style. The front and back should look like they could be sewn together to create one cohesive garment.";
 
-            // STEP 2: Generate combined image with BACK view using front as reference
-            console.log(`  Step 2: Generating back view and combining...`);
-            const backContext = backDescription ? `\n\nBACK VIEW ANALYSIS:\n${backDescription}` : '';
-            const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The back view MUST match the front view EXACTLY in terms of: 1) Overall garment length (shoulder to hem) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Line weight and drawing style. The front and back should look like they could be sewn together to create one cohesive garment.";
+        const combinePrompt = `The first image shows the FRONT technical flat (which is perfect and final). Generate ONE new image showing BOTH views side by side: Put the provided FRONT view on the LEFT (copy it EXACTLY as shown), and create a matching BACK view on the RIGHT. CRITICAL SPACING: Leave significant white space between the two views - the gap should be AT LEAST 20% of the garment width to ensure they are clearly separated and do NOT overlap or touch. Both views must be the same size and perfectly aligned vertically. ${commonFlatSuffix}${consistencyRequirements}${backContext}\n\nIMPORTANT: The front view (left side) must be IDENTICAL to the provided front technical flat. Only generate a new back view that matches it perfectly.`;
 
-            const combinePrompt = `The first image shows the FRONT technical flat (which is perfect and final). Generate ONE new image showing BOTH views side by side: Put the provided FRONT view on the LEFT (copy it EXACTLY as shown), and create a matching BACK view on the RIGHT. CRITICAL SPACING: Leave significant white space between the two views - the gap should be AT LEAST 20% of the garment width to ensure they are clearly separated and do NOT overlap or touch. Both views must be the same size and perfectly aligned vertically. ${commonFlatSuffix}${consistencyRequirements}${backContext}\n\nIMPORTANT: The front view (left side) must be IDENTICAL to the provided front technical flat. Only generate a new back view that matches it perfectly.`;
+        const combinedResult = await aiClient.models.generateContent({
+            model,
+            contents: { role: 'user', parts: [frontFlatPart, imagePartForBackPrompts, { text: combinePrompt }] },
+            config: generationConfig
+        });
+        const flatCombined = processApiResponse(combinedResult);
+        console.log(`  ✓ Technical flat generated (front + back combined)`);
 
-            const combinedResult = await aiClient.models.generateContent({
-                model,
-                contents: { role: 'user', parts: [frontFlatPart, imagePartForBackPrompts, { text: combinePrompt }] },
-                config: generationConfig
-            });
-            const combinedDataUrl = processApiResponse(combinedResult);
-            console.log(`  ✓ Variation ${variationIndex}/4 complete (front + back combined)`);
-
-            return combinedDataUrl;
-        };
-
-        // Generate all 4 variations in parallel using two-step process
-        console.log('📸 Generating 4 technical flat variations (each uses 2-step process)...');
-        const flatVariations = await Promise.all([
-            generateSingleVariation(1),
-            generateSingleVariation(2),
-            generateSingleVariation(3),
-            generateSingleVariation(4)
-        ]);
-
-        console.log('\n✅ All 4 technical flat variations generated successfully');
-
-        return { flatVariations };
+        return { flatCombined };
     } catch (error) {
         console.error('❌ TECHNICAL FLAT GENERATION FAILED:', error);
         throw error;
     }
 };
 
-const generateTechPackRendering = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, frontDescription = null, backDescription = null) => {
+
+const generateTechPackRendering = async (frontImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, frontDescription = null, backDescription = null, feedback = null) => {
     try {
         console.log('========================================');
-        console.log('🎨 GENERATING PHOTOREALISTIC RENDERING VARIATIONS');
-        console.log('Generating 4 variations for selection...');
+        console.log('🎨 GENERATING PHOTOREALISTIC RENDERING (SINGLE)');
         console.log('========================================');
+        if (feedback) console.log('📝 Including user feedback:', feedback);
 
         const model = imageEditingModel;
         console.log('Using model:', model);
@@ -988,41 +1060,37 @@ const generateTechPackRendering = async (frontImageDataUrl, backImageDataUrl = n
 
         const commonRenderingSuffix = "Create a photorealistic 3D rendering of the garment displayed on a neutral, ghost mannequin against a clean, light gray studio background. The rendering must look like a high-quality product photograph with realistic fabric texture, accurate drape physics, and professional studio lighting. Use ray-traced rendering techniques for authentic material properties and lighting. Do not include any text or watermarks.";
 
-        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT. CRITICAL SPACING: Leave significant white space between the two views - the gap should be AT LEAST 20% of the garment width to ensure they are clearly separated and do NOT overlap or touch. Both views must be the same size and perfectly aligned vertically. ${commonRenderingSuffix}${consistencyRequirements}${combinedContext}`;
+        const feedbackSection = feedback ? `\n\nIMPORTANT FEEDBACK/CHANGES REQUESTED: ${feedback}\n\nPlease incorporate this feedback while maintaining all other aspects of the garment design.` : '';
 
-        // Generate 4 variations in parallel
+        const renderingCombinedPrompt = `Generate ONE image showing BOTH front AND back photorealistic renderings side by side. Front view on LEFT, back view on RIGHT. CRITICAL SPACING: Leave significant white space between the two views - the gap should be AT LEAST 20% of the garment width to ensure they are clearly separated and do NOT overlap or touch. Both views must be the same size and perfectly aligned vertically. ${commonRenderingSuffix}${consistencyRequirements}${combinedContext}${feedbackSection}`;
+
         const aiClient = getAIClientForModel(model);
         const generationConfig = {
             responseModalities: [Modality.IMAGE, Modality.TEXT],
-            temperature: 1.0 // Higher temperature for variation
+            temperature: 0.5 // Lower temperature for stability
         };
 
-        console.log('📸 Generating 4 rendering variations in parallel...');
-        const results = await Promise.all([
-            aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: generationConfig }),
-            aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: generationConfig }),
-            aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: generationConfig }),
-            aiClient.models.generateContent({ model, contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] }, config: generationConfig })
-        ]);
-
-        const renderingVariations = results.map((result, index) => {
-            const imageData = processApiResponse(result);
-            console.log(`✅ Rendering variation ${index + 1}/4 generated`);
-            return imageData;
+        console.log('📸 Generating rendering...');
+        const result = await aiClient.models.generateContent({
+            model,
+            contents: { role: 'user', parts: [imagePartForBackPrompts, { text: renderingCombinedPrompt }] },
+            config: generationConfig
         });
 
-        console.log('✅ All 4 rendering variations generated successfully');
+        const renderingCombined = processApiResponse(result);
+        console.log(`✅ Rendering generated successfully`);
 
-        return { renderingVariations };
+        return { renderingCombined };
     } catch (error) {
         console.error('❌ RENDERING GENERATION FAILED:', error);
         throw error;
     }
 };
 
+
 const generateTechPackAnnotations = async (imagePart) => {
     // Helper to identify what needs to be annotated
-    const model = textVisionModel;
+    const model = textVisionModel; // Use textVisionModel for annotations
     const prompt = `Identify the key technical components of this garment that require callouts in a manufacturing tech pack.
     Return a simple list of 5-8 specific items (e.g., "Ribbed Collar", "Sleeve Hem", "Side Seam Zipper", "Kangaroo Pocket", "Drawstring").
     Focus on construction details, trims, and fasteners. Do not create full sentences, just the list of feature names.`;
@@ -1036,7 +1104,7 @@ const generateTechPackAnnotations = async (imagePart) => {
     return response.text;
 };
 
-const generateAnnotatedTechPack = async (flatImageDataUrl, backImageDataUrl = null, frontIncludesBack = false) => {
+const generateAnnotatedTechPack = async (flatImageDataUrl, backImageDataUrl = null, frontIncludesBack = false, feedback = null) => {
     try {
         console.log('========================================');
         console.log('🎨 GENERATING ANNOTATED TECH PACK');
@@ -1048,13 +1116,13 @@ const generateAnnotatedTechPack = async (flatImageDataUrl, backImageDataUrl = nu
 
         const flatImagePart = dataUrlToGenerativePart(flatImageDataUrl);
 
-        // Step 1: Generate the list of annotations
+        // Step 1: Generate the list of annotations (unless feedback overrides functionality, but usually feedback refines the style/placement)
         console.log('📝 Identifying features to annotate...');
         const annotationsList = await generateTechPackAnnotations(flatImagePart);
         console.log('Found annotations:', annotationsList);
 
         // Step 2: Use the "Best Prompt" from Tech Pack research
-        const bestPromptTemplate = `You are an expert **Technical Fashion Illustrator** specializing in CAD overlays. Your task is to take a provided technical flat illustration and overlay specific red text and arrows onto it.
+        let bestPromptTemplate = `You are an expert **Technical Fashion Illustrator** specializing in CAD overlays. Your task is to take a provided technical flat illustration and overlay specific red text and arrows onto it.
 
 **INPUT DATA:**
 - **Base Image:** A technical garment flat illustration. **Left Half = Front View**. **Right Half = Back View**.
@@ -1094,6 +1162,11 @@ Scan the text for these keywords to decide where the arrow points:
 3.  Draw the Red Overlay.
 4.  Output the final Result.`;
 
+        if (feedback) {
+            console.log('🗣️ Appending feedback to prompt:', feedback);
+            bestPromptTemplate += `\n\n**USER FEEDBACK / ADJUSTMENTS:**\nThe user has provided the following specific feedback or adjustments to apply to this annotation task:\n"${feedback}"\nPLEASE PRIORITIZE THIS FEEDBACK over typical defaults if it conflicts.`;
+        }
+
         const finalPrompt = bestPromptTemplate.replace('{annotations}', annotationsList);
 
         console.log('📤 Sending annotation request to Gemini...');
@@ -1103,7 +1176,7 @@ Scan the text for these keywords to decide where the arrow points:
             contents: { role: 'user', parts: [flatImagePart, { text: finalPrompt }] },
             config: {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
-                temperature: 0.5
+                temperature: 0.0
             }
         });
 
@@ -1130,6 +1203,7 @@ const geminiService = {
     generateMoodboardImage,
     regenerateColor,
     rewritePrompt,
+    selectBestImage, // Added selectBestImage to geminiService
     // Tech Illustration functions
     analyzeTechPackSketch,
     generateTechPackAssets,
@@ -1155,18 +1229,28 @@ app.get('/api/fabrics', async (req, res) => {
 });
 
 app.post('/api/gemini', async (req, res) => {
-    const { func, args } = req.body;
-
-    if (!geminiService[func]) {
-        return res.status(400).json({ error: 'Invalid function name' });
-    }
-
     try {
+        const { func, args } = req.body;
+
+        if (!func) {
+            return res.status(400).json({ error: 'Function name is required' });
+        }
+
+        if (!geminiService[func]) {
+            return res.status(400).json({ error: `Invalid function name: $ { func }` });
+        }
+
         const result = await geminiService[func](...args);
         res.json(result);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
+        console.error('API Error in /api/gemini:', error);
+        // Ensure we send a JSON response
+        if (!res.headersSent) {
+            res.status(500).json({
+                error: error.message || 'Internal Server Error',
+                details: error.stack
+            });
+        }
     }
 });
 
@@ -1221,9 +1305,9 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
             // Try to find videos in different possible response structures
             // Veo response format: operation.response.videos[{gcsUri, mimeType}]
             const videos = operation.response?.videos ||
-                          operation.response?.predictions ||
-                          operation.response?.generatedVideos ||
-                          [];
+                operation.response?.predictions ||
+                operation.response?.generatedVideos ||
+                [];
 
             if (videos.length > 0) {
                 console.log(`📹 Found ${videos.length} video(s) already in GCS bucket: gs://${bucketName}/${videoFolder}/`);
@@ -1234,10 +1318,10 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
                             // Try different possible fields for video URI
                             // Veo format: video.gcsUri (points to our bucket since we set storageUri)
                             const gcsUri = video?.gcsUri ||
-                                          video?.videoGcsUri ||
-                                          video?.uri ||
-                                          video?.video?.uri ||
-                                          video?.video?.gcsUri;
+                                video?.videoGcsUri ||
+                                video?.uri ||
+                                video?.video?.uri ||
+                                video?.video?.gcsUri;
 
                             if (!gcsUri) {
                                 console.error('❌ No video URI found in video object:', JSON.stringify(video, null, 2));
@@ -1378,12 +1462,12 @@ app.get('/api/videos/list', async (req, res) => {
 app.use(express.static('dist'));
 
 app.get(/^\/(?!api).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
 app.listen(PORT, HOST, () => {
-  console.log(`Server is running on ${HOST}:${PORT}`);
+    console.log(`Server is running on ${HOST}:${PORT}`);
 });

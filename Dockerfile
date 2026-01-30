@@ -5,7 +5,8 @@ FROM node:20-slim
 WORKDIR /usr/src/app
 
 # Copy package.json and package-lock.json to the working directory
-COPY package*.json ./
+# Copy package.json to the working directory (exclude lockfile to avoid private registry issues)
+COPY package.json ./
 
 # Install any needed packages
 RUN npm install

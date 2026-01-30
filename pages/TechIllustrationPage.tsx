@@ -1,5 +1,22 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import { useState, useCallback } from 'react';
 import { TechPackImageUploader } from '../components/TechPackImageUploader';
+import { HistorySelectionModal } from '../components/HistorySelectionModal';
 import { TechPackResultCard } from '../components/TechPackResultCard';
 import { TechPackSpinner } from '../components/TechPackSpinner';
 import { TechPackImagePreviewModal } from '../components/TechPackImagePreviewModal';
@@ -37,21 +54,20 @@ export default function TechPackPage() {
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>('upload');
 
   // Technical Flat State
-  const [flatVariations, setFlatVariations] = useState<string[]>([]);
   const [selectedFlatIndex, setSelectedFlatIndex] = useState<number>(0);
   const [flatHistory, setFlatHistory] = useState<FlatHistory[]>([]);
-  const [currentFlatHistoryId, setCurrentFlatHistoryId] = useState<string | null>(null);
-
-  // Rendering State
-  const [renderingVariations, setRenderingVariations] = useState<string[]>([]);
   const [selectedRenderingIndex, setSelectedRenderingIndex] = useState<number>(0);
   const [renderingHistory, setRenderingHistory] = useState<RenderingHistory[]>([]);
-  const [currentRenderingHistoryId, setCurrentRenderingHistoryId] = useState<string | null>(null);
 
   // Regeneration State
   const [isRegeneratingRendering, setIsRegeneratingRendering] = useState<boolean>(false);
   const [isRegeneratingFlat, setIsRegeneratingFlat] = useState<boolean>(false);
-  const [isRegeneratingAnnotations, setIsRegeneratingAnnotations] = useState<boolean>(false);
+  /* const [isRegeneratingAnnotations, setIsRegeneratingAnnotations] = useState<boolean>(false); */
+
+  const [historyModalOpen, setHistoryModalOpen] = useState<boolean>(false);
+  const [historyModalType, setHistoryModalType] = useState<'flat' | 'rendering'>('flat');
+
+  const [garmentDescriptions, setGarmentDescriptions] = useState<{ front: string; back: string | null } | null>(null);
 
   const handleGenerate = useCallback(async (frontFile: File, backFile: File | null, includesBack: boolean) => {
     const frontDataUrl = URL.createObjectURL(frontFile);
@@ -63,9 +79,7 @@ export default function TechPackPage() {
     });
     setFrontIncludesBack(includesBack);
     setGeneratedImages(null);
-    setFlatVariations([]);
     setFlatHistory([]);
-    setRenderingVariations([]);
     setRenderingHistory([]);
     setError(null);
     setIsLoading(true);
@@ -73,48 +87,91 @@ export default function TechPackPage() {
 
     try {
       // Convert File to base64 data URL
-      const frontBase64 = await fileToDataUrl(frontFile);
-      const backBase64 = backFile ? await fileToDataUrl(backFile) : null;
+      const [frontBase64, backBase64] = await Promise.all([
+        fileToDataUrl(frontFile),
+        backFile ? fileToDataUrl(backFile) : Promise.resolve(null)
+      ]);
 
       // Step 1: Analyze sketches with Gemini Pro
-      setLoadingStep('Step 1/4: Analyzing your sketches with AI...');
-      const frontDescription = await analyzeTechPackSketch(frontBase64);
-      const backDescription = backBase64 ? await analyzeTechPackSketch(backBase64) : null;
+      setLoadingStep('Analyzing your sketches with AI...');
+      const [frontDescription, backDescription] = await Promise.all([
+        analyzeTechPackSketch(frontBase64),
+        backBase64 ? analyzeTechPackSketch(backBase64) : Promise.resolve(null)
+      ]);
+      setGarmentDescriptions({ front: frontDescription, back: backDescription });
 
-      // Step 2: Generate 4 technical flat variations using two-step process
-      setLoadingStep('Step 2/4: Generating technical flat variations (two-step process)...');
+      // Step 2: Generate Flat and Rendering (SINGLE)
+      setLoadingStep('Generating technical flat and photorealistic rendering...');
 
-      const response = await fetch('/api/gemini', {
+      const [flatResponse, renderingResponse] = await Promise.all([
+        fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            func: 'generateTechPackFlat',
+            args: [frontBase64, backBase64, includesBack, frontDescription, backDescription]
+          })
+        }),
+        fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            func: 'generateTechPackRendering',
+            args: [frontBase64, backBase64, includesBack, frontDescription, backDescription]
+          })
+        })
+      ]);
+
+      if (!flatResponse.ok || !renderingResponse.ok) {
+        throw new Error('Failed to generate images');
+      }
+
+      const [flatData, renderingData] = await Promise.all([
+        flatResponse.json(),
+        renderingResponse.json()
+      ]);
+
+      console.log('📦 Received flat data:', flatData);
+      console.log('📦 Received rendering data:', renderingData);
+
+      // Step 3: Auto-generate Annotations using the Flat
+      setLoadingStep('Generating technical annotations...');
+      const annotationResponse = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          func: 'generateTechPackFlat',
-          args: [frontBase64, backBase64, includesBack, frontDescription, backDescription]
+          func: 'generateAnnotatedTechPack',
+          args: [flatData.flatCombined, null, includesBack]
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate technical flat variations');
-      }
+      if (!annotationResponse.ok) throw new Error('Failed to generate annotated tech pack');
+      const annotationData = await annotationResponse.json();
 
-      const flatData = await response.json();
-      console.log('📦 Received flat data:', flatData);
-
-      // Store all 4 flat variations in history
+      // Store Results
       const historyId = Date.now().toString();
-      setFlatVariations(flatData.flatVariations);
-      setSelectedFlatIndex(0);
+
+      // Update History (Single item arrays)
       setFlatHistory([{
         id: historyId,
-        variations: flatData.flatVariations,
+        variations: [flatData.flatCombined],
         timestamp: Date.now()
       }]);
-      setCurrentFlatHistoryId(historyId);
 
-      console.log('✅ Stored', flatData.flatVariations.length, 'flat variations');
+      setRenderingHistory([{
+        id: historyId,
+        variations: [renderingData.renderingCombined],
+        timestamp: Date.now()
+      }]);
 
-      // Move to flat selection step - pause and wait for user to select
-      setWorkflowStep('selecting_flat');
+      setGeneratedImages({
+        flatCombined: flatData.flatCombined,
+        renderingCombined: renderingData.renderingCombined,
+        annotatedOverlay: annotationData.annotatedImage,
+        annotations: annotationData.annotations
+      });
+
+      setWorkflowStep('complete');
       setIsLoading(false);
       setLoadingStep('');
 
@@ -158,7 +215,7 @@ export default function TechPackPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           func: 'regenerateTechPackRendering',
-          args: [frontBase64, backBase64, frontIncludesBack, feedback]
+          args: [frontBase64, backBase64, frontIncludesBack, feedback, garmentDescriptions?.front, garmentDescriptions?.back]
         })
       });
 
@@ -177,9 +234,55 @@ export default function TechPackPage() {
     }
   }, [uploadedImages, generatedImages, frontIncludesBack]);
 
-  const handleRegenerateFlat = useCallback(async (feedback?: string) => {
+  /* 
+   * Smart Regeneration:
+   * - If user is viewing Annotations (isOverlayActive=true), ONLY regenerate annotations logic.
+   * - If user is viewing Flat (isOverlayActive=false/undefined), regenerate Flat FIRST, then Annotations.
+   */
+  const handleRegenerateFlat = useCallback(async (feedback?: string, isOverlayActive?: boolean) => {
     if (!uploadedImages.front || !generatedImages) return;
 
+    // Case 1: Only regenerate Annotations (Overlay is Active)
+    if (isOverlayActive) {
+      /* setIsRegeneratingAnnotations(true); */ // Re-using flat spinner for simplicity or add specific state
+      setIsRegeneratingFlat(true); // Using same spinner for now
+      setError(null);
+
+      try {
+        console.log('🎨 Regenerating ONLY Annotations (Smart Mode)');
+
+        // Use the CURRENT flat image
+        const currentFlat = generatedImages.flatCombined;
+
+        const annotationResponse = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            func: 'generateAnnotatedTechPack',
+            args: [currentFlat, null, frontIncludesBack, feedback]
+          })
+        });
+
+        if (!annotationResponse.ok) throw new Error('Failed to regenerate annotations');
+
+        const annotationData = await annotationResponse.json();
+
+        setGeneratedImages(prev => prev ? {
+          ...prev,
+          annotatedOverlay: annotationData.annotatedImage,
+          annotations: annotationData.annotations
+        } : null);
+
+      } catch (e) {
+        console.error(e);
+        setError('Failed to regenerate annotations');
+      } finally {
+        setIsRegeneratingFlat(false);
+      }
+      return;
+    }
+
+    // Case 2: Full Regeneration (Flat + Annotations) - Existing Logic
     setIsRegeneratingFlat(true);
     setError(null);
 
@@ -236,6 +339,7 @@ export default function TechPackPage() {
     }
   }, [uploadedImages, generatedImages, frontIncludesBack]);
 
+  /*
   const handleRegenerateAnnotations = useCallback(async () => {
     if (!generatedImages?.flatCombined) return;
 
@@ -272,207 +376,15 @@ export default function TechPackPage() {
       setIsRegeneratingAnnotations(false);
     }
   }, [generatedImages, frontIncludesBack]);
+  */
 
-  const handleRegenerateFlatVariations = useCallback(async () => {
-    if (!uploadedImages.front) return;
 
-    setIsRegeneratingFlat(true);
-    setError(null);
 
-    try {
-      const frontBase64 = await fileToDataUrl(uploadedImages.front.file);
-      const backBase64 = uploadedImages.back ? await fileToDataUrl(uploadedImages.back.file) : null;
 
-      // Re-analyze sketches
-      const frontDescription = await analyzeTechPackSketch(frontBase64);
-      const backDescription = backBase64 ? await analyzeTechPackSketch(backBase64) : null;
 
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          func: 'generateTechPackFlat',
-          args: [frontBase64, backBase64, frontIncludesBack, frontDescription, backDescription]
-        })
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to regenerate technical flat variations');
-      }
 
-      const flatData = await response.json();
 
-      // Add to history
-      const historyId = Date.now().toString();
-      setFlatHistory(prev => [...prev, {
-        id: historyId,
-        variations: flatData.flatVariations,
-        timestamp: Date.now()
-      }]);
-      setCurrentFlatHistoryId(historyId);
-      setFlatVariations(flatData.flatVariations);
-      setSelectedFlatIndex(0);
-
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      console.error(e);
-      setError(`Regeneration failed: ${errorMessage}`);
-    } finally {
-      setIsRegeneratingFlat(false);
-    }
-  }, [uploadedImages, frontIncludesBack]);
-
-  const handleContinueToAnnotations = useCallback(async () => {
-    if (!uploadedImages.front || flatVariations.length === 0) return;
-
-    setIsLoading(true);
-    setWorkflowStep('generating_annotations');
-    setError(null);
-
-    try {
-      const selectedFlat = flatVariations[selectedFlatIndex];
-
-      // Step 3: Generate annotations on the selected technical flat
-      setLoadingStep('Step 3/4: Adding technical annotations to the flat...');
-
-      const annotationResponse = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          func: 'generateAnnotatedTechPack',
-          args: [selectedFlat, null, frontIncludesBack]
-        })
-      });
-
-      if (!annotationResponse.ok) {
-        throw new Error('Failed to generate annotated tech pack');
-      }
-
-      const annotationData = await annotationResponse.json();
-
-      // Store annotated version
-      setGeneratedImages({
-        flatCombined: selectedFlat,
-        renderingCombined: null,
-        annotatedOverlay: annotationData.annotatedImage,
-        annotations: annotationData.annotations
-      });
-
-      // Step 4: Generate photorealistic rendering variations
-      setLoadingStep('Step 4/4: Generating photorealistic 3D rendering variations...');
-      setWorkflowStep('selecting_rendering');
-
-      const frontBase64 = await fileToDataUrl(uploadedImages.front.file);
-      const backBase64 = uploadedImages.back ? await fileToDataUrl(uploadedImages.back.file) : null;
-
-      const frontDescription = await analyzeTechPackSketch(frontBase64);
-      const backDescription = backBase64 ? await analyzeTechPackSketch(backBase64) : null;
-
-      const renderingResponse = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          func: 'generateTechPackRendering',
-          args: [frontBase64, backBase64, frontIncludesBack, frontDescription, backDescription]
-        })
-      });
-
-      if (!renderingResponse.ok) {
-        throw new Error('Failed to generate rendering');
-      }
-
-      const renderingData = await renderingResponse.json();
-
-      // Store all 4 rendering variations in history
-      const renderingHistoryId = Date.now().toString();
-      setRenderingVariations(renderingData.renderingVariations);
-      setSelectedRenderingIndex(0);
-      setRenderingHistory([{
-        id: renderingHistoryId,
-        variations: renderingData.renderingVariations,
-        timestamp: Date.now()
-      }]);
-      setCurrentRenderingHistoryId(renderingHistoryId);
-
-      console.log('✅ Stored', renderingData.renderingVariations.length, 'rendering variations');
-
-      // Move to rendering selection step - pause and wait for user to select
-      setWorkflowStep('selecting_rendering');
-      setIsLoading(false);
-      setLoadingStep('');
-
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      console.error(e);
-      setError(`Generation failed: ${errorMessage}. Please check the console for details and try again.`);
-      setWorkflowStep('selecting_flat');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [uploadedImages, flatVariations, selectedFlatIndex, frontIncludesBack]);
-
-  const handleRegenerateRenderingVariations = useCallback(async () => {
-    if (!uploadedImages.front) return;
-
-    setIsRegeneratingRendering(true);
-    setError(null);
-
-    try {
-      const frontBase64 = await fileToDataUrl(uploadedImages.front.file);
-      const backBase64 = uploadedImages.back ? await fileToDataUrl(uploadedImages.back.file) : null;
-
-      // Re-analyze sketches
-      const frontDescription = await analyzeTechPackSketch(frontBase64);
-      const backDescription = backBase64 ? await analyzeTechPackSketch(backBase64) : null;
-
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          func: 'generateTechPackRendering',
-          args: [frontBase64, backBase64, frontIncludesBack, frontDescription, backDescription]
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to regenerate rendering variations');
-      }
-
-      const renderingData = await response.json();
-
-      // Add to history
-      const historyId = Date.now().toString();
-      setRenderingHistory(prev => [...prev, {
-        id: historyId,
-        variations: renderingData.renderingVariations,
-        timestamp: Date.now()
-      }]);
-      setCurrentRenderingHistoryId(historyId);
-      setRenderingVariations(renderingData.renderingVariations);
-      setSelectedRenderingIndex(0);
-
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      console.error(e);
-      setError(`Regeneration failed: ${errorMessage}`);
-    } finally {
-      setIsRegeneratingRendering(false);
-    }
-  }, [uploadedImages, frontIncludesBack]);
-
-  const handleContinueToComplete = useCallback(() => {
-    if (renderingVariations.length === 0 || !generatedImages) return;
-
-    const selectedRendering = renderingVariations[selectedRenderingIndex];
-
-    // Update generatedImages with the selected rendering
-    setGeneratedImages(prev => prev ? {
-      ...prev,
-      renderingCombined: selectedRendering
-    } : null);
-
-    setWorkflowStep('complete');
-  }, [renderingVariations, selectedRenderingIndex, generatedImages]);
 
   const handleReset = () => {
     if (uploadedImages.front) {
@@ -483,14 +395,10 @@ export default function TechPackPage() {
     }
     setUploadedImages({ front: null, back: null });
     setGeneratedImages(null);
-    setFlatVariations([]);
     setSelectedFlatIndex(0);
     setFlatHistory([]);
-    setCurrentFlatHistoryId(null);
-    setRenderingVariations([]);
     setSelectedRenderingIndex(0);
     setRenderingHistory([]);
-    setCurrentRenderingHistoryId(null);
     setError(null);
     setIsLoading(false);
     setLoadingStep('');
@@ -498,11 +406,11 @@ export default function TechPackPage() {
     setFrontIncludesBack(false);
     setIsRegeneratingRendering(false);
     setIsRegeneratingFlat(false);
-    setIsRegeneratingAnnotations(false);
+    /* setIsRegeneratingAnnotations(false); */
   };
 
   return (
-    <div className="h-full bg-gray-900 text-gray-100 font-sans flex flex-col overflow-auto">
+    <div className="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans flex flex-col overflow-auto transition-colors duration-200">
       <main className="flex-grow container mx-auto px-4 py-8 flex flex-col items-center">
         {workflowStep === 'upload' && !isLoading && (
           <TechPackImageUploader onGenerate={handleGenerate} disabled={isLoading} onPreview={setPreviewingImage} />
@@ -530,191 +438,9 @@ export default function TechPackPage() {
           </div>
         )}
 
-        {/* Technical Flat Selection Screen */}
-        {workflowStep === 'selecting_flat' && !isLoading && flatVariations?.length > 0 && (
-          <div className="w-full max-w-7xl">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2">Select Your Preferred Technical Flat</h2>
-                <p className="text-gray-400">Choose the variation that best represents your design</p>
-              </div>
-              <button
-                onClick={handleReset}
-                className="bg-gray-700 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 transition-colors duration-300 flex items-center justify-center gap-2"
-              >
-                <ResetIcon />
-                Start Over
-              </button>
-            </div>
 
-            {/* History Sidebar */}
-            {flatHistory.length >= 1 && (
-              <div className="mb-6 bg-gray-800 p-4 rounded-lg border border-gray-700">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Generation History ({flatHistory.length} generation{flatHistory.length !== 1 ? 's' : ''})
-                </h3>
-                <div className="flex gap-3 overflow-x-auto">
-                  {flatHistory.map((history, index) => (
-                    <button
-                      key={history.id}
-                      onClick={() => {
-                        setCurrentFlatHistoryId(history.id);
-                        setFlatVariations(history.variations);
-                        setSelectedFlatIndex(0);
-                      }}
-                      className={`flex-shrink-0 px-4 py-2 rounded-md font-medium transition-colors ${currentFlatHistoryId === history.id
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        }`}
-                    >
-                      <div className="text-xs opacity-75 mb-1">Generation {index + 1}</div>
-                      <div>{new Date(history.timestamp).toLocaleTimeString()}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* 4 Variations Grid */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              {flatVariations.map((variation, index) => (
-                <div
-                  key={index}
-                  onClick={() => setSelectedFlatIndex(index)}
-                  className={`cursor-pointer rounded-lg overflow-hidden border-4 transition-all ${selectedFlatIndex === index
-                      ? 'border-indigo-500 shadow-lg shadow-indigo-500/50 scale-[1.02]'
-                      : 'border-transparent hover:border-gray-600'
-                    }`}
-                >
-                  <div className="bg-white p-4">
-                    <img
-                      src={variation}
-                      alt={`Technical flat variation ${index + 1}`}
-                      className="w-full h-auto"
-                    />
-                  </div>
-                  <div className={`text-center py-3 text-sm font-semibold ${selectedFlatIndex === index ? 'bg-indigo-600' : 'bg-gray-800'
-                    }`}>
-                    Variation {index + 1}
-                    {selectedFlatIndex === index && <span className="ml-2">✓</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={handleRegenerateFlatVariations}
-                disabled={isRegeneratingFlat}
-                className="bg-gray-700 text-white font-bold py-3 px-8 rounded-md hover:bg-gray-600 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <ResetIcon />
-                {isRegeneratingFlat ? 'Regenerating...' : 'Regenerate'}
-              </button>
-              <button
-                onClick={handleContinueToAnnotations}
-                className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-md hover:bg-indigo-500 transition-colors duration-300 flex items-center gap-2"
-              >
-                Continue with Variation {selectedFlatIndex + 1}
-                <span className="text-xl">→</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Rendering Selection Screen */}
-        {workflowStep === 'selecting_rendering' && !isLoading && renderingVariations.length > 0 && (
-          <div className="w-full max-w-7xl">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2">Select Your Preferred Rendering</h2>
-                <p className="text-gray-400">Choose the photorealistic rendering that best showcases your design</p>
-              </div>
-              <button
-                onClick={handleReset}
-                className="bg-gray-700 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 transition-colors duration-300 flex items-center justify-center gap-2"
-              >
-                <ResetIcon />
-                Start Over
-              </button>
-            </div>
-
-            {/* History Sidebar */}
-            {renderingHistory.length >= 1 && (
-              <div className="mb-6 bg-gray-800 p-4 rounded-lg border border-gray-700">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Generation History ({renderingHistory.length} generation{renderingHistory.length !== 1 ? 's' : ''})
-                </h3>
-                <div className="flex gap-3 overflow-x-auto">
-                  {renderingHistory.map((history, index) => (
-                    <button
-                      key={history.id}
-                      onClick={() => {
-                        setCurrentRenderingHistoryId(history.id);
-                        setRenderingVariations(history.variations);
-                        setSelectedRenderingIndex(0);
-                      }}
-                      className={`flex-shrink-0 px-4 py-2 rounded-md font-medium transition-colors ${currentRenderingHistoryId === history.id
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        }`}
-                    >
-                      <div className="text-xs opacity-75 mb-1">Generation {index + 1}</div>
-                      <div>{new Date(history.timestamp).toLocaleTimeString()}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 4 Variations Grid */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              {renderingVariations.map((variation, index) => (
-                <div
-                  key={index}
-                  onClick={() => setSelectedRenderingIndex(index)}
-                  className={`cursor-pointer rounded-lg overflow-hidden border-4 transition-all ${selectedRenderingIndex === index
-                      ? 'border-indigo-500 shadow-lg shadow-indigo-500/50 scale-[1.02]'
-                      : 'border-transparent hover:border-gray-600'
-                    }`}
-                >
-                  <div className="bg-white p-4">
-                    <img
-                      src={variation}
-                      alt={`Rendering variation ${index + 1}`}
-                      className="w-full h-auto"
-                    />
-                  </div>
-                  <div className={`text-center py-3 text-sm font-semibold ${selectedRenderingIndex === index ? 'bg-indigo-600' : 'bg-gray-800'
-                    }`}>
-                    Variation {index + 1}
-                    {selectedRenderingIndex === index && <span className="ml-2">✓</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={handleRegenerateRenderingVariations}
-                disabled={isRegeneratingRendering}
-                className="bg-gray-700 text-white font-bold py-3 px-8 rounded-md hover:bg-gray-600 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <ResetIcon />
-                {isRegeneratingRendering ? 'Regenerating...' : 'Regenerate'}
-              </button>
-              <button
-                onClick={handleContinueToComplete}
-                className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-md hover:bg-indigo-500 transition-colors duration-300 flex items-center gap-2"
-              >
-                Continue with Variation {selectedRenderingIndex + 1}
-                <span className="text-xl">→</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Final Results Screen */}
         {!isLoading && generatedImages && uploadedImages.front && workflowStep === 'complete' && (
@@ -740,16 +466,73 @@ export default function TechPackPage() {
                 </>
               )}
               {generatedImages.renderingCombined && (
-                <TechPackResultCard title="Photorealistic Rendering (Front + Back)" imageUrl={generatedImages.renderingCombined} altText="AI-generated professional rendering with front and back views" fileName="rendering-combined.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateRendering} isRegenerating={isRegeneratingRendering} />
+                <TechPackResultCard
+                  title="Photorealistic Rendering (Front + Back)"
+                  imageUrl={generatedImages.renderingCombined}
+                  altText="AI-generated professional rendering with front and back views"
+                  fileName="rendering-combined.png"
+                  onPreview={setPreviewingImage}
+                  onRegenerate={handleRegenerateRendering}
+                  isRegenerating={isRegeneratingRendering}
+                  onShowHistory={() => {
+                    setHistoryModalType('rendering');
+                    setHistoryModalOpen(true);
+                  }}
+                />
               )}
-              <TechPackResultCard title="Technical Flat (Front + Back)" imageUrl={generatedImages.flatCombined} altText="AI-generated technical flat with front and back views" fileName="technical-flat-combined.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateFlat} isRegenerating={isRegeneratingFlat} />
-              {generatedImages.annotatedOverlay && (
-                <TechPackResultCard title="Annotated Tech Pack" imageUrl={generatedImages.annotatedOverlay} altText="AI-generated annotated technical sketch with callouts" fileName="annotated-techpack.png" onPreview={setPreviewingImage} onRegenerate={handleRegenerateAnnotations} isRegenerating={isRegeneratingAnnotations} />
-              )}
+              <TechPackResultCard
+                title="Technical Flat (Front + Back)"
+                imageUrl={generatedImages.flatCombined}
+                overlayImage={generatedImages.annotatedOverlay}
+                altText="AI-generated technical flat with front and back views"
+                fileName="technical-flat-combined.png"
+                onPreview={setPreviewingImage}
+                onRegenerate={handleRegenerateFlat}
+                isRegenerating={isRegeneratingFlat}
+                onShowHistory={() => {
+                  setHistoryModalType('flat');
+                  setHistoryModalOpen(true);
+                }}
+              />
             </div>
           </div>
         )}
-      </main>
+
+        <HistorySelectionModal
+          isOpen={historyModalOpen}
+          onClose={() => setHistoryModalOpen(false)}
+          title={historyModalType === 'flat' ? "Technical Flat History" : "Rendering History"}
+          images={
+            historyModalType === 'flat'
+              ? flatHistory.flatMap(h => h.variations)
+              : renderingHistory.flatMap(h => h.variations)
+          }
+          selectedIndex={historyModalType === 'flat' ? selectedFlatIndex : selectedRenderingIndex}
+          onSelect={(index) => {
+            // We need to look up the image URL from the history
+            // Flatten the list similarly to how we pass it to 'images'
+            const flatList = historyModalType === 'flat'
+              ? flatHistory.flatMap(h => h.variations)
+              : renderingHistory.flatMap(h => h.variations);
+
+            const selectedUrl = flatList[index];
+
+            if (historyModalType === 'flat') {
+              setSelectedFlatIndex(index);
+              // We might need to assume 1 variation per history entry if flattened?
+              // Actually flatVariations is just string[]. historyModal uses flatHistory?
+              // Wait, flatVariations is the CURRENT history session's variations.
+              // flatHistory is persistent?
+              // Let's check definitions.
+              // flatVariations: string[]
+              setGeneratedImages(prev => prev ? { ...prev, flatCombined: selectedUrl } : null);
+            } else {
+              setSelectedRenderingIndex(index);
+              setGeneratedImages(prev => prev ? { ...prev, renderingCombined: selectedUrl } : null);
+            }
+          }}
+        />
+      </main >
       {previewingImage && (
         <TechPackImagePreviewModal imageUrl={previewingImage} onClose={() => setPreviewingImage(null)} />
       )}

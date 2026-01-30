@@ -1,3 +1,19 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 
 import React, { useRef } from 'react';
 import { FABRICS } from '../constants/studioConstants';
@@ -31,11 +47,11 @@ export const FabricLibrary: React.FC<FabricLibraryProps> = ({ onSelectFabric, is
   const areSwatchesDisabled = !isActionable || !targetGarment;
 
   return (
-    <div className="bg-gray-800 p-3 rounded-lg shadow-lg flex-shrink-0">
-      <h2 className="text-lg font-bold mb-2 text-purple-300">Fabric Library</h2>
+    <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg flex-shrink-0 transition-colors duration-200">
+      <h2 className="text-lg font-bold mb-2 text-purple-600 dark:text-purple-300">Fabric Library</h2>
 
       <div className="mb-2">
-        <label htmlFor="target-garment" className="block text-sm font-medium text-gray-300 mb-1">
+        <label htmlFor="target-garment" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">
           Target Garment
         </label>
         <input
@@ -43,7 +59,7 @@ export const FabricLibrary: React.FC<FabricLibraryProps> = ({ onSelectFabric, is
           id="target-garment"
           value={targetGarment}
           onChange={(e) => setTargetGarment(e.target.value)}
-          className="w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-white p-2 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:text-gray-400"
+          className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-gray-900 dark:text-white p-2 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed disabled:text-gray-400 transition-colors duration-200"
           placeholder="e.g., shirt, pants, matching top and skirt"
           disabled={!isActionable}
         />
@@ -52,7 +68,7 @@ export const FabricLibrary: React.FC<FabricLibraryProps> = ({ onSelectFabric, is
       <div className="relative">
         <button
           onClick={() => scroll('left')}
-          className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 bg-gray-700/50 hover:bg-gray-600/80 rounded-full p-1 text-white transition-colors"
+          className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 bg-gray-200/50 dark:bg-gray-700/50 hover:bg-gray-300/80 dark:hover:bg-gray-600/80 rounded-full p-1 text-gray-600 dark:text-white transition-colors"
           aria-label="Scroll left"
         >
           <ArrowIcon className="h-6 w-6 transform rotate-180" />
@@ -84,7 +100,7 @@ export const FabricLibrary: React.FC<FabricLibraryProps> = ({ onSelectFabric, is
         </div>
         <button
           onClick={() => scroll('right')}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 bg-gray-700/50 hover:bg-gray-600/80 rounded-full p-1 text-white transition-colors"
+          className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 bg-gray-200/50 dark:bg-gray-700/50 hover:bg-gray-300/80 dark:hover:bg-gray-600/80 rounded-full p-1 text-gray-600 dark:text-white transition-colors"
           aria-label="Scroll right"
         >
           <ArrowIcon className="h-6 w-6" />

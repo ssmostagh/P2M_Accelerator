@@ -1,0 +1,21 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "github"]
+	url = https://github.com/ssmostagh/P2M_Accelerator.git
+	fetch = +refs/heads/*:refs/remotes/github/*
+[branch "master"]
+	remote = github
+	merge = refs/heads/master
+	vscode-merge-base = origin/master
+[branch "updates_testing"]
+	remote = origin
+	vscode-merge-base = origin/nov_updates_testing
+	merge = refs/heads/updates_testing
+[remote "origin"]
+	url = https://oauth2:glpat-_Nsux7u2jXIqX6UDfYqU2m86MQp1Ojhwb2UxCw.01.121rdoolk@gitlab.com/mostaghim/P2M_Accelerator.git
+	fetch = +refs/heads/*:refs/remotes/origin/*

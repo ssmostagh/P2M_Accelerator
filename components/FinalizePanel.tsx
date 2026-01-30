@@ -1,3 +1,19 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 
 
 import React from 'react';
@@ -61,9 +77,9 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
   };
 
   return (
-    <div className="bg-gray-800 border-gray-700 rounded-lg shadow-lg flex-shrink-0">
+    <div className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg shadow-lg flex-shrink-0 transition-colors duration-200">
       <div className="p-3">
-        <h2 className="text-purple-300 text-lg font-bold">Finalize & Export</h2>
+        <h2 className="text-purple-600 dark:text-purple-300 text-lg font-bold">Finalize & Export</h2>
       </div>
       <div className="px-3 pb-3 space-y-3">
         {/* View Toggle */}
@@ -98,7 +114,7 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
             <button
               onClick={onFinalizeFront}
               disabled={isLoading}
-              className="w-full bg-pink-600 hover:bg-pink-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
+              className="w-full bg-pink-600 hover:bg-pink-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
             >
               {isFrontFinalized ? '✓ Re-finalize Front Design' : '✓ Finalize Front Design'}
             </button>
@@ -108,7 +124,7 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
             <button
               onClick={onGenerateBack}
               disabled={isLoading}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
+              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
             >
               → Generate Back View
             </button>
@@ -118,7 +134,7 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
             <button
               onClick={onFinalizeBack}
               disabled={isLoading}
-              className="w-full bg-pink-600 hover:bg-pink-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
+              className="w-full bg-pink-600 hover:bg-pink-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
             >
               {isBackFinalized ? '✓ Re-finalize Back Design' : '✓ Finalize Back Design'}
             </button>
@@ -126,8 +142,8 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
         </div>
 
         {(isFrontFinalized || isBackFinalized) && (
-          <div className="border-t border-gray-700 pt-4 space-y-3">
-            <h3 className="text-lg font-semibold text-gray-300">Finalized Designs</h3>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Finalized Designs</h3>
             {isFrontFinalized && !isBackFinalized && <p className="text-sm text-green-400">✓ Front design finalized</p>}
 
             {/* Side-by-side preview when both are finalized */}
@@ -136,7 +152,7 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <p className="text-xs text-gray-400 text-center font-semibold">FRONT</p>
-                    <div className="bg-gray-900 rounded-lg overflow-hidden border border-gray-600">
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
                       <img
                         src={finalFrontImage}
                         alt="Finalized front design"
@@ -146,7 +162,7 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-gray-400 text-center font-semibold">BACK</p>
-                    <div className="bg-gray-900 rounded-lg overflow-hidden border border-gray-600">
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
                       <img
                         src={finalBackImage}
                         alt="Finalized back design"
@@ -161,13 +177,13 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
           </div>
         )}
 
-        <div className="border-t border-gray-700 pt-4 space-y-3">
-          <h3 className="text-lg font-semibold text-gray-300 mb-2">Export</h3>
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Export</h3>
 
           <button
             onClick={onDownloadImages}
             disabled={!isFrontFinalized && !isBackFinalized || isLoading}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
+            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
           >
             ⬇ Download Images
           </button>
@@ -177,7 +193,7 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
               <button
                 onClick={onGenerateVideo}
                 disabled={isGeneratingVideo || isLoading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all"
               >
                 {isGeneratingVideo ? '⏳ Generating Video...' : '🎬 Generate Catwalk Video'}
               </button>
@@ -187,8 +203,8 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
               )}
 
               {videoVariations.length > 0 && (
-                <div className="bg-gray-700 p-3 rounded-lg">
-                  <h4 className="text-md font-semibold text-gray-300 mb-2">Preview & Select Video</h4>
+                <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
+                  <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Preview & Select Video</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {videoVariations.map((videoUrl, index) => (
                       <div
@@ -213,7 +229,7 @@ export const FinalizePanel: React.FC<FinalizePanelProps> = ({
               )}
 
               {finalVideoUrl && (
-                <div className="space-y-2 bg-gray-700 p-3 rounded-lg">
+                <div className="space-y-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
                   <button
                     onClick={handlePlayVideo}
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all"

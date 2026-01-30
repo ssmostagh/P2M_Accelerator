@@ -1,3 +1,19 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 
 import React from 'react';
 import { DesignView } from '../types';
@@ -16,7 +32,7 @@ interface EditStudioProps {
 }
 
 const LoadingSkeleton: React.FC = () => (
-  <div className="w-full h-full bg-gray-700 rounded-lg animate-pulse"></div>
+  <div className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
 );
 
 const Placeholder: React.FC<{ view: DesignView, hasFinalizedFront: boolean }> = ({ view, hasFinalizedFront }) => {
@@ -29,12 +45,12 @@ const Placeholder: React.FC<{ view: DesignView, hasFinalizedFront: boolean }> = 
   }
 
   return (
-    <div className="w-full h-full bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center text-center p-8">
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="w-full h-full bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center text-center p-8">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
-      <h3 className="text-xl font-semibold text-gray-300">{title}</h3>
-      <p className="text-gray-400 mt-2">{text}</p>
+      <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">{title}</h3>
+      <p className="text-gray-500 dark:text-gray-400 mt-2">{text}</p>
     </div>
   );
 };
@@ -58,8 +74,8 @@ export const EditStudio: React.FC<EditStudioProps> = ({
   const canEdit = (view === DesignView.FRONT && image) || (view === DesignView.BACK && image);
 
   return (
-    <div className="bg-gray-800 p-3 rounded-lg shadow-lg h-full flex flex-col">
-      <h2 className="text-lg font-bold mb-2 text-purple-300">
+    <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg h-full flex flex-col transition-colors duration-200">
+      <h2 className="text-lg font-bold mb-2 text-purple-600 dark:text-purple-300">
         {view === DesignView.FRONT ? 'Design Studio: Front View' : 'Design Studio: Back View'}
       </h2>
 
@@ -96,7 +112,7 @@ export const EditStudio: React.FC<EditStudioProps> = ({
         </div>
       )}
 
-      <div className="aspect-w-1 aspect-h-1 w-full bg-gray-900 rounded-lg overflow-hidden mb-2 flex-grow min-h-0">
+      <div className="aspect-w-1 aspect-h-1 w-full bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden mb-2 flex-grow min-h-0 transition-colors duration-200">
         {isLoading && !image ? <LoadingSkeleton /> : 
           image ? (
             <div className="relative w-full h-full">
@@ -118,7 +134,7 @@ export const EditStudio: React.FC<EditStudioProps> = ({
       <div className="flex flex-col sm:flex-row gap-2">
         <textarea
           rows={2}
-          className="flex-grow bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-white p-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
+          className="flex-grow bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-gray-900 dark:text-white p-2 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-200"
           placeholder={canEdit ? "e.g., change color to navy blue, add a zipper" : "Generate an image to start editing"}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}

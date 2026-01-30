@@ -2,6 +2,10 @@
 
 A comprehensive fashion design platform powered by Google's Gemini AI, featuring virtual garment try-on, AI-powered moodboard creation, and sketch-to-tech pack conversion. This tool enables designers to visualize garments on models, apply fabric changes, generate front and back views, create dynamic catwalk videos, generate themed color palettes, and transform hand-drawn sketches into professional technical illustrations ready for production.
 
+This is not an officially supported Google product. This project is not eligible for the [Google Open Source Software Vulnerability Rewards Program](https://bughunters.google.com/open-source-security).
+
+This project is intended for demonstration purposes only. It is not intended for use in a production environment.
+
 ## Features
 
 ### Design Studio
@@ -121,7 +125,7 @@ The application uses the default Compute Engine service account. Grant it the re
 # Get your project number
 PROJECT_NUMBER=$(gcloud projects describe your-project-id --format="value(projectNumber)")
 
-# Grant all required roles to the default compute service account
+# Grant all required roles in one command
 for role in run.invoker logging.admin storage.objectCreator storage.objectUser aiplatform.user; do
   gcloud projects add-iam-policy-binding your-project-id \
     --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
@@ -348,9 +352,9 @@ PORT=3000 node server.js
 
 ## License
 
-[Add your license here]
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Credits
 
-Built by: mostaghim@
+Built by: mostaghim@ \
 Tech Pack Annotations built by: jwortz@
