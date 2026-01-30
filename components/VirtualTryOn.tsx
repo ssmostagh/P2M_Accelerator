@@ -1,0 +1,114 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+import React, { useState, useEffect } from 'react';
+
+interface VirtualTryOnProps {
+  modelImage: File | null;
+  setModelImage: (file: File | null) => void;
+  garmentImage: File | null;
+  setGarmentImage: (file: File | null) => void;
+  onGenerate: () => void;
+  isLoading: boolean;
+}
+
+const ImageUpload: React.FC<{
+  file: File | null;
+  setFile: (file: File | null) => void;
+  label: string;
+  id: string;
+}> = ({ file, setFile, label, id }) => {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [file]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+        {label}
+      </label>
+      <div className="flex justify-center px-2 pt-2 pb-2 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md transition-colors duration-200">
+        <div className="space-y-1 text-center">
+          {previewUrl ? (
+            <img src={previewUrl} alt="Preview" className="mx-auto h-20 w-20 object-cover rounded-md" />
+          ) : (
+            <svg className="mx-auto h-10 w-10 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+          <div className="flex text-xs text-gray-400 dark:text-gray-400 justify-center">
+            <label htmlFor={id} className="relative cursor-pointer bg-gray-100 dark:bg-gray-700 rounded-md font-medium text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-gray-100 dark:focus-within:ring-offset-gray-800 focus-within:ring-purple-500 px-2 py-1 transition-colors duration-200">
+              <span>Upload</span>
+              <input id={id} name={id} type="file" className="sr-only" accept="image/png, image/jpeg" onChange={handleFileChange} />
+            </label>
+          </div>
+          <p className="text-xs text-gray-500">PNG, JPG</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
+  modelImage,
+  setModelImage,
+  garmentImage,
+  setGarmentImage,
+  onGenerate,
+  isLoading,
+}) => {
+  return (
+    <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg flex flex-col flex-shrink-0 transition-colors duration-200">
+      <h2 className="text-lg font-bold mb-2 text-purple-600 dark:text-purple-300">Virtual Try-On</h2>
+      <div className="grid grid-cols-2 gap-2 flex-grow">
+        <ImageUpload file={modelImage} setFile={setModelImage} label="Model Image" id="model-upload" />
+        <ImageUpload file={garmentImage} setFile={setGarmentImage} label="Garment Image" id="garment-upload" />
+      </div>
+      <div className="mt-3">
+        <button
+          onClick={onGenerate}
+          disabled={!modelImage || !garmentImage || isLoading}
+          className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-purple-500 disabled:bg-gray-300 dark:disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors"
+        >
+          {isLoading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generating...
+            </>
+          ) : 'Generate Try-On'}
+        </button>
+      </div>
+    </div>
+  );
+};

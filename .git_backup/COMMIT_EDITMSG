@@ -1,0 +1,7 @@
+Update README to use default compute service account
+
+- Remove custom service account creation steps
+- Update to use default compute service account (PROJECT_NUMBER-compute@developer.gserviceaccount.com)
+- Simplify setup by removing key creation steps
+- Add automatic project number retrieval command
+- Clarify that default compute SA is used for Cloud Run/Compute Engine deployments
