@@ -35,10 +35,12 @@ const app = express();
 app.use(express.json({ limit: '50mb' })); // Increase limit to handle base64 images
 
 // --- Gemini Service Code ---
-const project = process.env.GOOGLE_CLOUD_PROJECT;
+// Dynamic project resolution (ADC/Cloud Run)
+let project = process.env.GOOGLE_CLOUD_PROJECT;
 const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
 
-if (!project) {
+// Enforce explicit .env configuration locally, but allow Cloud Run (which injects K_SERVICE) to natively auto-resolve via ADC
+if (!project && !process.env.K_SERVICE) {
     console.error('ERROR: GOOGLE_CLOUD_PROJECT environment variable is not set!');
     console.error('Please ensure your .env file exists and contains:');
     console.error('  GOOGLE_CLOUD_PROJECT=your-project-id');
@@ -47,27 +49,32 @@ if (!project) {
     process.exit(1);
 }
 
-console.log(`Using project ID: ${project}`);
+console.log(`Using project ID: ${project || 'Auto-resolved via Cloud Run'}`);
 console.log(`Using default location: ${location}`);
 
 // Model-to-region mapping
 // Models that require specific regions override the default
 const MODEL_REGIONS = {
-    'gemini-3-pro-image-preview': 'global',
-    'gemini-3-pro-preview': 'global',
-    'gemini-2.5-pro': 'us-central1',
     'gemini-2.5-pro': 'us-central1',
     'gemini-2.5-flash': 'us-central1',
     'gemini-2.5-flash-image': 'us-central1',
-    'gemini-2.0-flash-exp': 'global',
-    'gemini-3-flash-preview': 'us-central1',
+    'veo-3.1-fast-generate-001': 'us-central1',
     // Add other model-specific regions here as needed
     // All other models will use the default location from environment variables
 };
 
 // Function to get the appropriate region for a model
 const getRegionForModel = (modelName) => {
-    return MODEL_REGIONS[modelName] || location;
+    // Explicit override defined in the map takes precedence
+    if (MODEL_REGIONS[modelName]) {
+        return MODEL_REGIONS[modelName];
+    }
+    // Dynamically route all 3.1 or preview models to global
+    if (modelName.includes('3.1') || modelName.includes('preview')) {
+        return 'global';
+    }
+    // Fallback to default location
+    return location;
 };
 
 // Cache of AI clients by region to avoid recreating them
@@ -81,7 +88,8 @@ const getAIClientForModel = (modelName) => {
         console.log(`Creating AI client for region: ${modelRegion}`);
         aiClients[modelRegion] = new GoogleGenAI({
             vertexai: true,
-            project: project,
+            // If project is defined, use it. Otherwise pass undefined so Cloud Run ADC takes over.
+            ...(project ? { project } : {}),
             location: modelRegion
         });
     }
@@ -92,8 +100,8 @@ const getAIClientForModel = (modelName) => {
 // Initialize default AI client for backward compatibility
 const ai = getAIClientForModel('default');
 
-// Initialize Google Cloud Storage
-const storage = new Storage({ project: project });
+// Initialize Google Cloud Storage (allowing undefined project for ADC)
+const storage = new Storage(project ? { project } : undefined);
 const bucketName = process.env.GCS_BUCKET_NAME || 'p2m-accelerator-ufp';
 const videoFolder = process.env.GCS_VIDEO_FOLDER || 'video_generation';
 
@@ -168,9 +176,9 @@ const loadFabrics = async () => {
 };
 
 // Updated to Gemini 3 for image generation tasks
-const imageEditingModel = 'gemini-3-pro-image-preview';
-const textVisionModel = 'gemini-2.5-pro'; // For garment description and analysis
-const videoModel = 'veo-3.1-generate-preview';
+const imageEditingModel = 'gemini-3.1-flash-image-preview';
+const textVisionModel = 'gemini-3.1-pro-preview'; // For garment description and analysis
+const videoModel = 'veo-3.1-fast-generate-001';
 
 const dataUrlToGenerativePart = (dataUrl) => {
     const [header, data] = dataUrl.split(',');
@@ -222,7 +230,7 @@ const processApiResponse = (response) => {
 // Helper function to generate model-specific virtual try-on prompts
 const getVirtualTryOnPrompt = (garmentDescription, modelName) => {
     // Gemini 3 Pro - trying a more concise, direct approach
-    if (modelName === 'gemini-3-pro-image-preview') {
+    if (modelName === 'gemini-3-pro-image-preview' || modelName === 'gemini-3.1-flash-image-preview') {
         return `Generate a photorealistic image of the person from the first image wearing the garment from the second image.
 
 GARMENT DESCRIPTION:
@@ -370,7 +378,7 @@ const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) 
     };
 
     // Add temperature for gemini-3-pro-image-preview to increase creativity/quality
-    if (imageEditingModel === 'gemini-3-pro-image-preview') {
+    if (imageEditingModel === 'gemini-3-pro-image-preview' || imageEditingModel === 'gemini-3.1-flash-image-preview') {
         generationConfig.temperature = 1.0; // Higher temperature for more variation
     }
 
@@ -409,7 +417,7 @@ const generateInitialImageVariations = async (modelImagePart, garmentImagePart, 
     };
 
     // Add temperature for gemini-3-pro-image-preview
-    if (imageEditingModel === 'gemini-3-pro-image-preview') {
+    if (imageEditingModel === 'gemini-3-pro-image-preview' || imageEditingModel === 'gemini-3.1-flash-image-preview') {
         generationConfig.temperature = 1.0; // Higher temperature for more variation
     }
 
@@ -494,57 +502,23 @@ const generateVideoVariations = async (frontImage, count = 3) => {
         throw new Error('Failed to get access token from Google Auth');
     }
 
-    // Prepare the request body with correct Vertex AI structure
-    // According to Vertex AI docs: instances array + separate parameters object
-    const requestBody = {
-        instances: [
-            {
-                prompt: "Animate the person in the image turning around smoothly, as if on a catwalk, to show the back of their garment. The movement should be natural, smooth, and the background should remain consistent.",
-                image: {
-                    bytesBase64Encoded: inlineData.data,
-                    mimeType: inlineData.mimeType
-                }
-            }
-        ],
-        parameters: {
-            storageUri: `gs://${bucketName}/${videoFolder}/`,
-            sampleCount: 4,
-            durationSeconds: 6,
-            aspectRatio: "16:9",
-            resolution: "720p",
-            generateAudio: true
-        }
-    };
+    const aiClient = getAIClientForModel(videoModel);
 
-    // Make direct HTTP request to Vertex AI API
-    const apiEndpoint = `${location}-aiplatform.googleapis.com`;
-    const url = `https://${apiEndpoint}/v1/projects/${project}/locations/${location}/publishers/google/models/${videoModel}:predictLongRunning`;
-
-    console.log('📤 Sending request to Vertex AI API...');
-    console.log('URL:', url);
-    console.log('Request body:', JSON.stringify(requestBody, null, 2));
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken.token}`
-        },
-        body: JSON.stringify(requestBody)
+    // Call Veo model via the SDK
+    const response = await aiClient.models.generateVideos({
+        model: videoModel,
+        prompt: "Animate the person in the image turning around smoothly, as if on a catwalk, to show the back of their garment. The movement should be natural, smooth, and the background should remain consistent.",
+        images: [{
+            data: inlineData.data,
+            mimeType: inlineData.mimeType 
+        }],
+        outputGcsUri: `gs://${bucketName}/${videoFolder}/`,
     });
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error Response:', errorText);
-        console.error('Request body was:', JSON.stringify(requestBody, null, 2));
-        throw new Error(`Video generation API failed: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    const result = await response.json();
-    console.log('✅ Video generation started:', result);
+    console.log('✅ Video generation started');
 
     // Extract operation name from response
-    const operationName = result.name;
+    const operationName = response.name;
     if (!operationName) {
         throw new Error('No operation name returned from API');
     }
@@ -562,7 +536,7 @@ const selectBestImage = async (images, criteria) => {
         console.log('🏆 Analyzing variations to select the best one...');
         console.log('🏆 Analyzing variations to select the best one...');
         // Use Gemini 3 Flash Preview as requested
-        const model = 'gemini-3-flash-preview';
+        const model = 'gemini-3.1-flash-lite-preview';
         const aiClient = getAIClientForModel(model);
 
         const imageParts = images.map(dataUrl => dataUrlToGenerativePart(dataUrl));
@@ -629,7 +603,7 @@ const generateColorPalette = async (title, keywords) => {
 
 const generateMoodboardImage = async (prompt, aspectRatio) => {
     // Using Gemini 2.5 Flash Image for moodboard generation (faster, good for creative iteration)
-    const model = 'gemini-2.5-flash-image';
+    const model = 'gemini-3.1-flash-image-preview';
     const aiClient = getAIClientForModel(model);
 
     console.log(`🎨 Generating moodboard image with aspect ratio: ${aspectRatio}`);
@@ -780,7 +754,7 @@ const regenerateColor = async (currentColorName, themePrompt, direction) => {
 const rewritePrompt = async (originalPrompt) => {
     const metaPrompt = `You are a creative assistant for a fashion designer. Rewrite and enhance the following image prompt to generate a more visually compelling and detailed photograph for a fashion moodboard. Keep the core concepts but add artistic details. Return only the new prompt text, without any surrounding quotes or explanations. Prompt to rewrite: "${originalPrompt}"`;
 
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-3.1-flash-lite-preview';
     const aiClient = getAIClientForModel(model);
     const response = await aiClient.models.generateContent({
         model: model,
@@ -1261,45 +1235,26 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
     console.log('📨 Received operation status request for:', decodedName);
 
     try {
-        // Get access token for authentication
-        const client = await auth.getClient();
-        const accessToken = await client.getAccessToken();
+        const aiClient = getAIClientForModel(videoModel);
 
-        if (!accessToken.token) {
-            throw new Error('Failed to get access token from Google Auth');
-        }
-
-        // Make direct HTTP request to check operation status
-        // For Veo operations, use fetchPredictOperation endpoint with POST
-        // Operation name format: projects/.../publishers/google/models/veo-3.1-generate-preview/operations/{id}
-        const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google/models/${videoModel}:fetchPredictOperation`;
-
-        console.log('🔍 Checking operation status with fetchPredictOperation');
+        console.log('🔍 Checking operation status using SDK');
         console.log('📝 Operation name:', decodedName);
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken.token}`
-            },
-            body: JSON.stringify({
-                operationName: decodedName
-            })
-        });
+        const operation = await aiClient.operations.getOperation({ name: decodedName });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Operation status error:', errorText);
-            throw new Error(`Failed to get operation status: ${response.status} ${response.statusText}`);
-        }
+        // Match frontend's expectations based on the REST structure 
+        const isDone = operation.done;
+        const normalizedOperation = {
+            name: operation.name,
+            done: isDone,
+            response: operation.response
+        };
 
-        const operation = await response.json();
-        console.log('📊 Operation status:', operation.done ? 'DONE' : 'IN PROGRESS');
-        console.log('📋 Full operation response:', JSON.stringify(operation, null, 2));
+        console.log('📊 Operation status:', isDone ? 'DONE' : 'IN PROGRESS');
+        console.log('📋 Full operation response:', JSON.stringify(normalizedOperation, null, 2));
 
         // If operation is done, try to extract and save videos
-        if (operation.done) {
+        if (isDone) {
             console.log('✅ Operation completed, checking for videos...');
 
             // Try to find videos in different possible response structures

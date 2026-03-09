@@ -39,7 +39,7 @@ def main():
         val_set = []
     
     # 2. Initialize Components
-    generator = Generator() # Uses gemini-3-pro-image-preview
+    generator = Generator() # Uses gemini-3.1-flash-image-preview
     evaluator = Evaluator()
     optimizer = Optimizer()
     

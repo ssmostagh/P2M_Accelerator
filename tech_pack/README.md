@@ -10,7 +10,7 @@ This application optimizes prompts for generating annotated technical fashion sk
     ```
 
 2.  **Environment**:
-    Ensure you have access to `gemini-3-pro-image-preview` and `gemini-2.0-flash-001`.
+    Ensure you have access to `gemini-3.1-flash-image-preview` and `gemini-2.0-flash-001`.
     Set `GOOGLE_CLOUD_PROJECT` if needed (defaults to `wortz-project-352116` in code).
 
 ## Usage
@@ -42,7 +42,7 @@ This creates `metrics_plot.png`.
 ## Components
 
 -   `data_loader.py`: Loads and pairs images/annotations from `Testcase.jsonl`.
--   `generator.py`: Generates images using `gemini-3-pro-image-preview`.
+-   `generator.py`: Generates images using `gemini-3.1-flash-image-preview`.
 -   `evaluator.py`: Evaluates generated images using `gemini-3-pro-preview` against a rubric.
 -   `optimizer.py`: Proposes new prompts based on evaluation feedback using `gemini-3-pro-preview`.
 -   `main_optimization.py`: Orchestrates the training loop (Generate -> Evaluate -> Optimize).
@@ -59,7 +59,7 @@ This creates `metrics_plot.png`.
 ├── check_status.py           # Status checker utility
 ├── data_loader.py            # Data management
 ├── evaluator.py              # LLM evaluator using gemini-3-pro-preview
-├── generator.py              # Image generation using gemini-3-pro-image-preview
+├── generator.py              # Image generation using gemini-3.1-flash-image-preview
 ├── main_optimization.py      # Main training loop
 ├── optimizer.py              # Prompt optimization logic
 ├── trace.json                # Optimization history log

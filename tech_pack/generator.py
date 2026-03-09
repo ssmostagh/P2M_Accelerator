@@ -19,8 +19,8 @@ from PIL import Image
 import io
 
 class Generator:
-    def __init__(self, model_name="gemini-3-pro-image-preview"):
-        self.client = genai.Client(vertexai=True, project="wortz-project-352116", location="global")
+    def __init__(self, model_name="gemini-3.1-flash-image-preview"):
+        self.client = genai.Client(vertexai=True, location="global")
         self.model_name = model_name
 
     def generate(self, image_path: str, annotations: list[str], prompt_template: str) -> Image.Image:
