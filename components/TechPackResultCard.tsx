@@ -22,6 +22,7 @@ interface TechPackResultCardProps {
   title: string;
   imageUrl: string;
   overlayImage?: string; // New optional prop for annotation overlay
+  // svgContent?: string;   // Optional SVG vector data
   altText: string;
   fileName: string;
   onPreview: (imageUrl: string) => void;
@@ -30,7 +31,7 @@ interface TechPackResultCardProps {
   isRegenerating?: boolean;
 }
 
-export const TechPackResultCard: React.FC<TechPackResultCardProps> = ({ title, imageUrl, overlayImage, altText, fileName, onPreview, onRegenerate, onShowHistory, isRegenerating }) => {
+export const TechPackResultCard: React.FC<TechPackResultCardProps> = ({ title, imageUrl, overlayImage, /* svgContent, */ altText, fileName, onPreview, onRegenerate, onShowHistory, isRegenerating }) => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [showOverlay, setShowOverlay] = useState(false); // State for toggle
@@ -166,6 +167,16 @@ export const TechPackResultCard: React.FC<TechPackResultCardProps> = ({ title, i
           <DownloadIcon />
           Download {showOverlay ? 'Annotation' : 'Image'}
         </a>
+        {/* {svgContent && (
+          <a
+            href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgContent)}`}
+            download={`${fileName.split('.')[0] || 'tech-flat'}.svg`}
+            className="w-full bg-emerald-600 text-white text-center font-bold py-3 px-4 rounded-lg hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-emerald-500 transition-all duration-300 flex items-center justify-center gap-2 mt-2"
+          >
+            <DownloadIcon />
+            Download SVG (Illustrator)
+          </a>
+        )} */}
       </div>
     </div>
   );

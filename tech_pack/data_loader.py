@@ -94,18 +94,24 @@ class DataLoader:
         file_annotations = self._parse_jsonl()
         
         files = os.listdir(self.images_dir)
-        emp_files = [f for f in files if f.endswith('EMP.jpg')]
+        emp_files = [f for f in files if f.endswith('EMP.jpg') or f.endswith('_EMP.jpg')]
         
         for emp_file in emp_files:
-            # Extract ID
-            # Example: "100229320MN SS ATHLUXE POLO EMP.jpg" -> "100229320MN SS ATHLUXE POLO"
-            base_name = emp_file.replace(' EMP.jpg', '')
-            
-            # Find corresponding REF
-            ref_file = f"{base_name} REF.jpg"
+            # Handle both " EMP.jpg" and "_EMP.jpg"
+            if ' ' in emp_file:
+                base_name = emp_file.replace(' EMP.jpg', '')
+                ref_file = f"{base_name} REF.jpg"
+            else:
+                base_name = emp_file.replace('_EMP.jpg', '')
+                ref_file = f"{base_name}_REF.jpg"
+                
             if not os.path.exists(os.path.join(self.images_dir, ref_file)):
                  # Try without REF
-                 ref_file = f"{base_name}.jpg"
+                 if ' ' in emp_file:
+                     ref_file = f"{base_name}.jpg"
+                 else:
+                     ref_file = f"{base_name}.jpg" # Same for underscore fallback
+            
             
             if os.path.exists(os.path.join(self.images_dir, ref_file)):
                 # Get annotations
@@ -125,9 +131,10 @@ class DataLoader:
         return data_pairs
 
 if __name__ == "__main__":
+    base_dir = os.path.join(os.path.dirname(__file__), "data_tek_pak/data")
     loader = DataLoader(
-        "macys_tek_pak/data/JSONL-Files/Testcase.jsonl",
-        "macys_tek_pak/data/Images"
+        os.path.join(base_dir, "JSONL-Files/Testcase.jsonl"),
+        os.path.join(base_dir, "Images")
     )
     pairs = loader.load_data()
     print(f"Found {len(pairs)} pairs.")

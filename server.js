@@ -55,9 +55,8 @@ console.log(`Using default location: ${location}`);
 // Model-to-region mapping
 // Models that require specific regions override the default
 const MODEL_REGIONS = {
-    'gemini-2.5-pro': 'us-central1',
-    'gemini-2.5-flash': 'us-central1',
-    'gemini-2.5-flash-image': 'us-central1',
+    'gemini-3.1-flash-preview': 'global',
+    'gemini-3.1-flash-image-preview': 'global',
     'veo-3.1-fast-generate-001': 'us-central1',
     // Add other model-specific regions here as needed
     // All other models will use the default location from environment variables
@@ -86,10 +85,11 @@ const getAIClientForModel = (modelName) => {
 
     if (!aiClients[modelRegion]) {
         console.log(`Creating AI client for region: ${modelRegion}`);
+        const isVertex = modelRegion !== 'global';
         aiClients[modelRegion] = new GoogleGenAI({
-            vertexai: true,
-            // If project is defined, use it. Otherwise pass undefined so Cloud Run ADC takes over.
-            ...(project ? { project } : {}),
+            vertexai: isVertex,
+            // If project is defined and using Vertex, use it. Otherwise pass undefined.
+            ...(isVertex && project ? { project } : {}),
             location: modelRegion
         });
     }
@@ -230,7 +230,7 @@ const processApiResponse = (response) => {
 // Helper function to generate model-specific virtual try-on prompts
 const getVirtualTryOnPrompt = (garmentDescription, modelName) => {
     // Gemini 3 Pro - trying a more concise, direct approach
-    if (modelName === 'gemini-3-pro-image-preview' || modelName === 'gemini-3.1-flash-image-preview') {
+    if (modelName === 'gemini-3.1-flash-image-preview' || modelName === 'gemini-3.1-flash-image-preview') {
         return `Generate a photorealistic image of the person from the first image wearing the garment from the second image.
 
 GARMENT DESCRIPTION:
@@ -293,7 +293,7 @@ const analyzeTechPackSketch = async (sketchImagePart) => {
     console.log('🔍 ANALYZING TECH ILLUSTRATION SKETCH');
     console.log('========================================');
 
-    const model = 'gemini-3-pro-preview'; // Using Gemini 3 Pro for detailed technical analysis
+    const model = 'gemini-3.1-pro-preview'; // Using Gemini 3 Pro for detailed technical analysis
     const prompt = `Analyze this fashion design sketch and provide a detailed technical description of THE GARMENT ONLY.
 
 CRITICAL INSTRUCTION - GARMENT vs ACCESSORIES:
@@ -377,8 +377,8 @@ const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) 
         responseModalities: [Modality.IMAGE, Modality.TEXT],
     };
 
-    // Add temperature for gemini-3-pro-image-preview to increase creativity/quality
-    if (imageEditingModel === 'gemini-3-pro-image-preview' || imageEditingModel === 'gemini-3.1-flash-image-preview') {
+    // Add temperature for gemini-3.1-flash-image-preview to increase creativity/quality
+    if (imageEditingModel === 'gemini-3.1-flash-image-preview' || imageEditingModel === 'gemini-3.1-flash-image-preview') {
         generationConfig.temperature = 1.0; // Higher temperature for more variation
     }
 
@@ -416,8 +416,8 @@ const generateInitialImageVariations = async (modelImagePart, garmentImagePart, 
         responseModalities: [Modality.IMAGE, Modality.TEXT],
     };
 
-    // Add temperature for gemini-3-pro-image-preview
-    if (imageEditingModel === 'gemini-3-pro-image-preview' || imageEditingModel === 'gemini-3.1-flash-image-preview') {
+    // Add temperature for gemini-3.1-flash-image-preview
+    if (imageEditingModel === 'gemini-3.1-flash-image-preview' || imageEditingModel === 'gemini-3.1-flash-image-preview') {
         generationConfig.temperature = 1.0; // Higher temperature for more variation
     }
 
@@ -502,18 +502,50 @@ const generateVideoVariations = async (frontImage, count = 3) => {
         throw new Error('Failed to get access token from Google Auth');
     }
 
-    const aiClient = getAIClientForModel(videoModel);
+    const modelRegion = getRegionForModel(videoModel);
 
-    // Call Veo model via the SDK
-    const response = await aiClient.models.generateVideos({
-        model: videoModel,
-        prompt: "Animate the person in the image turning around smoothly, as if on a catwalk, to show the back of their garment. The movement should be natural, smooth, and the background should remain consistent.",
-        images: [{
-            data: inlineData.data,
-            mimeType: inlineData.mimeType 
-        }],
-        outputGcsUri: `gs://${bucketName}/${videoFolder}/`,
+    // According to Vertex AI docs: instances array + separate parameters object
+    const requestBody = {
+        instances: [
+            {
+                prompt: "Animate the person in the image turning around smoothly, as if on a catwalk, to show the back of their garment. The movement should be natural, smooth, and the background should remain consistent.",
+                image: {
+                    bytesBase64Encoded: inlineData.data,
+                    mimeType: inlineData.mimeType
+                }
+            }
+        ],
+        parameters: {
+            storageUri: `gs://${bucketName}/${videoFolder}/`,
+            sampleCount: count,
+            durationSeconds: 6,
+            aspectRatio: "16:9",
+            resolution: "720p"
+        }
+    };
+
+    // Make direct HTTP request to Vertex AI API to start generation
+    const url = `https://${modelRegion}-aiplatform.googleapis.com/v1/projects/${project}/locations/${modelRegion}/publishers/google/models/${videoModel}:predictLongRunning`;
+
+    console.log('📤 Sending request to Vertex AI API (predictLongRunning)...');
+    console.log('URL:', url);
+
+    const apiResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken.token}`
+        },
+        body: JSON.stringify(requestBody)
     });
+
+    if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error('❌ API Error Response:', errorText);
+        throw new Error(`Video generation API failed: ${apiResponse.status} ${apiResponse.statusText} - ${errorText}`);
+    }
+
+    const response = await apiResponse.json();
 
     console.log('✅ Video generation started');
 
@@ -1085,7 +1117,7 @@ const generateAnnotatedTechPack = async (flatImageDataUrl, backImageDataUrl = nu
         console.log('========================================');
 
         // Use Gemini 3 Pro for the complex instruction following required for annotations
-        const model = 'gemini-3-pro-image-preview';
+        const model = 'gemini-3.1-flash-image-preview';
         console.log('Using model:', model);
 
         const flatImagePart = dataUrlToGenerativePart(flatImageDataUrl);
@@ -1165,6 +1197,53 @@ Scan the text for these keywords to decide where the arrow points:
     }
 };
 
+const generateTechPackFlatSvg = async (flatCombinedDataUrl) => {
+    try {
+        console.log('========================================');
+        console.log('🎨 GENERATING TECHNICAL FLAT SVG');
+        console.log('========================================');
+
+        const model = 'gemini-3.1-pro-preview';
+        const flatImagePart = dataUrlToGenerativePart(flatCombinedDataUrl);
+
+        const prompt = `You are an expert fashion illustrator and SVG developer.
+Task: Convert this clean raster technical flat illustration into a scalable vector XML SVG file for Adobe Illustrator.
+
+Requirements:
+1. Output ONLY valid, clean <svg>...</svg> code.
+2. Use black strokes (#000000) for paths and transparent or white fills.
+3. Include critical style features like the collar, buttons, seams, and hems as paths.
+4. Do NOT include any text labels, arrows, dimensions, or annotations.
+5. Do NOT include any HTML markdown or backticks wrapper like \`\`\`xml.
+6. ASPECT RATIO SAFETY: The <svg viewBox="..."> dimensions MUST perfectly match the height/width ratio of the input image canvas to prevent any vertical or horizontal stretching distortion. Set strict canvas bounds.
+7. TRACE ACCURACY: Focus on exact silhouette node tracing. Capture specific curved closures, short sleeves, lapel folds, and seam paths without reverting to generic polygonal templates.
+8. CONTINUOUS PATHS: Wrap outer silhouette paths in SINGLE continuous closed vectors (d="..." Z) to prevent disjointed floating lines. 
+9. SMOOTH BÉZIER: Avoid rigid polygonal lines (L) for organic fashion contours (shoulders, waist slope, collar folds). Heavily utilize C (Cubic Bézier) or S curve commands for smooth drawing vectors flow.
+10. JOINT CONNECTIVITY: Ensure any collars, lapels, and shoulders REST FLUSH on main torso anchors rather than floating. Vertex coordinates MUST meet up precisely at neck/armhole seam points.`;
+
+        const aiClient = getAIClientForModel(model);
+        const result = await aiClient.models.generateContent({
+            model: model,
+            contents: { role: 'user', parts: [flatImagePart, { text: prompt }] },
+            config: {
+                responseModalities: ["TEXT"],
+                temperature: 0.2
+            }
+        });
+
+        const textOutput = result.text || "";
+        const cleanSvg = textOutput.replace(/```xml/g, '').replace(/```/g, '').trim();
+
+        console.log('✅ SVG Generation complete');
+        return { flatCombinedSvg: cleanSvg };
+
+    } catch (error) {
+        console.error('❌ Error generating tech flat SVG:', error);
+        throw error;
+    }
+};
+
+
 const geminiService = {
     generateInitialImage,
     generateInitialImageVariations,
@@ -1186,6 +1265,7 @@ const geminiService = {
     regenerateTechPackRendering,
     regenerateTechPackFlat,
     generateAnnotatedTechPack,
+    generateTechPackFlatSvg,
 };
 
 // --- API Endpoints ---
@@ -1235,20 +1315,42 @@ app.get('/api/gemini/operation/:name', async (req, res) => {
     console.log('📨 Received operation status request for:', decodedName);
 
     try {
-        const aiClient = getAIClientForModel(videoModel);
+        const modelRegion = getRegionForModel(videoModel);
 
-        console.log('🔍 Checking operation status using SDK');
-        console.log('📝 Operation name:', decodedName);
+        // --- 📨 REST :fetchPredictOperation FALLBACK ---
+        const client = await auth.getClient();
+        const accessToken = await client.getAccessToken();
 
-        const operation = await aiClient.operations.getOperation({ name: decodedName });
+        const url = `https://${modelRegion}-aiplatform.googleapis.com/v1/projects/${project}/locations/${modelRegion}/publishers/google/models/${videoModel}:fetchPredictOperation`;
+        console.log(`🔗 Querying Vertex REST API: ${url}`);
+        console.log(`📝 Operation name in body: ${decodedName}`);
 
-        // Match frontend's expectations based on the REST structure 
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken.token}`,
+            },
+            body: JSON.stringify({
+                operationName: decodedName
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API Error: ${response.status} - ${errorText}`);
+        }
+
+        const operation = await response.json();
         const isDone = operation.done;
+
         const normalizedOperation = {
-            name: operation.name,
+            name: operation.name || decodedName, // Fallback to decoded name if API trims it
             done: isDone,
             response: operation.response
         };
+        // --------------------------------------------------
+
 
         console.log('📊 Operation status:', isDone ? 'DONE' : 'IN PROGRESS');
         console.log('📋 Full operation response:', JSON.stringify(normalizedOperation, null, 2));
@@ -1418,6 +1520,14 @@ app.use(express.static('dist'));
 
 app.get(/^\/(?!api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+const PORT = process.env.PORT || 8080;
+const HOST = '0.0.0.0';
+
+app.listen(PORT, HOST, () => {
+    console.log(`Server is running on ${HOST}:${PORT}`);
+});
 });
 
 const PORT = process.env.PORT || 8080;

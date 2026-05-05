@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "concurrently \"npm:dev\" \"node --max-http-header-size=80000 server.js\"",
+    "start": "concurrently \"npm:dev\" \"python3 -m uvicorn main:app --port 8080 --reload\"",
     "dev": "NODE_OPTIONS='--max-http-header-size=80000' vite",
     "build": "tsc && vite build",
     "serve": "vite preview"

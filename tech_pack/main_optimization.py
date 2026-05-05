@@ -21,7 +21,7 @@ from optimizer import Optimizer
 
 def main():
     # 1. Load Data
-    base_dir = "/usr/local/google/home/jwortz/macys_tek_pak/macys_tek_pak/data"
+    base_dir = os.path.join(os.path.dirname(__file__), "data_tek_pak/data")
     loader = DataLoader(
         os.path.join(base_dir, "JSONL-Files/Testcase.jsonl"),
         os.path.join(base_dir, "Images")

@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+google-genai
+google-cloud-storage
+python-dotenv
+aiofiles
+httpx
+pydantic

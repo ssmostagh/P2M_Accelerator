@@ -1,0 +1,5 @@
+project_id  = "YOUR_PROJECT_ID"
+region      = "us-central1"
+app_name    = "p2m-accelerator"
+image_url   = "us-central1-docker.pkg.dev/YOUR_PROJECT_ID/YOUR_REPO/p2m-accelerator:latest"
+bucket_name = "p2m-accelerator-assets"

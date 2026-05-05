@@ -90,4 +90,5 @@ export interface TechPackGeneratedImages {
   flatCombined: string;              // Single image with front + back technical flats
   annotatedOverlay?: string;         // Annotated tech pack with measurement callouts
   annotations?: string[];            // Array of annotation descriptions
+  flatCombinedSvg?: string;          // SVG vector drawing output
 }

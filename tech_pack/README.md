@@ -43,8 +43,8 @@ This creates `metrics_plot.png`.
 
 -   `data_loader.py`: Loads and pairs images/annotations from `Testcase.jsonl`.
 -   `generator.py`: Generates images using `gemini-3.1-flash-image-preview`.
--   `evaluator.py`: Evaluates generated images using `gemini-3-pro-preview` against a rubric.
--   `optimizer.py`: Proposes new prompts based on evaluation feedback using `gemini-3-pro-preview`.
+-   `evaluator.py`: Evaluates generated images using `gemini-3.1-pro-preview` against a rubric.
+-   `optimizer.py`: Proposes new prompts based on evaluation feedback using `gemini-3.1-pro-preview`.
 -   `main_optimization.py`: Orchestrates the training loop (Generate -> Evaluate -> Optimize).
 -   `check_status.py`: Checks the current status of the optimization run from `trace.json`.
 
@@ -58,7 +58,7 @@ This creates `metrics_plot.png`.
 ├── trace_assets/             # Generated images from optimization
 ├── check_status.py           # Status checker utility
 ├── data_loader.py            # Data management
-├── evaluator.py              # LLM evaluator using gemini-3-pro-preview
+├── evaluator.py              # LLM evaluator using gemini-3.1-pro-preview
 ├── generator.py              # Image generation using gemini-3.1-flash-image-preview
 ├── main_optimization.py      # Main training loop
 ├── optimizer.py              # Prompt optimization logic

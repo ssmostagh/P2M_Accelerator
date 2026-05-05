@@ -16,7 +16,7 @@ from google import genai
 from google.genai import types
 
 class Optimizer:
-    def __init__(self, model_name="gemini-3-pro-preview"):
+    def __init__(self, model_name="gemini-3.1-pro-preview"):
         self.client = genai.Client(vertexai=True, project="wortz-project-352116", location="global")
         self.model_name = model_name
         self.history = []

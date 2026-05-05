@@ -134,19 +134,34 @@ export default function TechPackPage() {
       console.log('📦 Received flat data:', flatData);
       console.log('📦 Received rendering data:', renderingData);
 
-      // Step 3: Auto-generate Annotations using the Flat
+      // Step 3: Auto-generate Annotations AND SVG concurrently
       setLoadingStep('Generating technical annotations...');
-      const annotationResponse = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          func: 'generateAnnotatedTechPack',
-          args: [flatData.flatCombined, null, includesBack]
+      const [annotationResponse /* , svgResponse */] = await Promise.all([
+        fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            func: 'generateAnnotatedTechPack',
+            args: [flatData.flatCombined, null, includesBack]
+          })
         })
-      });
+        /* fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            func: 'generateTechPackFlatSvg',
+            args: [flatData.flatCombined]
+          })
+        }) */
+      ]);
 
-      if (!annotationResponse.ok) throw new Error('Failed to generate annotated tech pack');
-      const annotationData = await annotationResponse.json();
+      if (!annotationResponse.ok /* || !svgResponse.ok */) {
+        throw new Error('Failed to generate supporting tech pack assets');
+      }
+
+      const [annotationData /* , svgData */] = await Promise.all([
+        annotationResponse.json()
+      ]);
 
       // Store Results
       const historyId = Date.now().toString();
@@ -168,7 +183,8 @@ export default function TechPackPage() {
         flatCombined: flatData.flatCombined,
         renderingCombined: renderingData.renderingCombined,
         annotatedOverlay: annotationData.annotatedImage,
-        annotations: annotationData.annotations
+        annotations: annotationData.annotations,
+        /* flatCombinedSvg: svgData.flatCombinedSvg */
       });
 
       setWorkflowStep('complete');
@@ -484,6 +500,7 @@ export default function TechPackPage() {
                 title="Technical Flat (Front + Back)"
                 imageUrl={generatedImages.flatCombined}
                 overlayImage={generatedImages.annotatedOverlay}
+                // svgContent={generatedImages.flatCombinedSvg}
                 altText="AI-generated technical flat with front and back views"
                 fileName="technical-flat-combined.png"
                 onPreview={setPreviewingImage}

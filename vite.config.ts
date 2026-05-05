@@ -25,8 +25,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        // Increase size limits for large base64 images
-        proxyTimeout: 120000,
+
       }
     },
     // Increase header size limits

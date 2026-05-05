@@ -1,7 +1,7 @@
 # Implementation Plan: Prompt Optimization Application
 
 ## Goal
-Build an application to optimize prompts for generating annotated technical pack images using `gemini-3-pro-image-preview`.
+Build an application to optimize prompts for generating annotated technical pack images using `gemini-3.1-flash-image-preview`.
 
 ## Data
 - **Source**: `Testcase.jsonl` and `Images/` directory.
@@ -19,12 +19,12 @@ Build an application to optimize prompts for generating annotated technical pack
 - Extracts text annotations.
 
 ### 2. Generator (`generator.py`)
-- **Model**: `gemini-3-pro-image-preview`.
+- **Model**: `gemini-3.1-flash-image-preview`.
 - **Input**: Empty Image + Prompt (Template populated with annotations).
 - **Output**: Generated Image.
 
 ### 3. Evaluator (`evaluator.py`)
-- **Model**: `gemini-3-pro-preview` (Vision).
+- **Model**: `gemini-3.1-pro-preview` (Vision).
 - **Rubric**:
     1. **Base Image Preservation**: 1-10 (How well it matches the EMP image structure).
     2. **Arrow Placement**: 1-10 (How well arrows match the REF image).
@@ -32,7 +32,7 @@ Build an application to optimize prompts for generating annotated technical pack
 - **Output**: JSON with scores and reasoning.
 
 ### 4. Optimizer (`optimizer.py`)
-- **Model**: `gemini-3-pro-preview` (Text/Reasoning).
+- **Model**: `gemini-3.1-pro-preview` (Text/Reasoning).
 - **Algorithm**: Trajectory-based OPRO with Chain-of-Thought (CoT).
 - **Logic**:
     - Analyzes optimization trajectory (past prompts + scores).
