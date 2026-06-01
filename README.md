@@ -191,79 +191,82 @@ GCS_VIDEO_FOLDER=video_generation
 
 ### Development Mode
 
-Start both the frontend development server and backend server concurrently:
+Start both the frontend development server (Vite) and the backend server (FastAPI) concurrently using the root orchestration script:
 
 ```bash
-npm start
+./start.sh
 ```
 
 This will:
-- Start the Vite dev server on `http://localhost:5173`
-- Start the Express backend server on `http://localhost:8080`
-- Enable hot module reloading for the frontend
+- Start the Python FastAPI backend on `http://localhost:8080`
+- Start the React/Vite frontend on `http://localhost:5173`
+- Setup active hot-reloading for both layers
+
+Alternatively, you can run them independently:
+
+#### Backend Only
+```bash
+cd backend
+python3 -m uvicorn main:app --reload --port 8080
+```
+
+#### Frontend Only
+```bash
+cd frontend
+npm run dev
+```
 
 ### Production Build
 
 1. **Build the frontend**:
-
 ```bash
+cd frontend
 npm run build
 ```
 
 2. **Start the production server**:
-
 ```bash
 node server.js
 ```
 
 3. **Access the application**:
-
 Open your browser and navigate to `http://localhost:8080`
-
-### Preview Production Build Locally
-
-To preview the production build without running the backend:
-
-```bash
-npm run serve
-```
 
 ## Project Structure
 
 ```
 P2M_Accelerator/
-├── components/           # React components
-│   ├── ColorCard.tsx    # Individual color swatch with regeneration controls
-│   ├── FinalizePanel.tsx
-│   ├── EditStudio.tsx
-│   ├── VirtualTryOn.tsx
-│   ├── FabricLibrary.tsx
-│   ├── HistoryPanel.tsx
-│   ├── VideoPlayerModal.tsx
-│   ├── TechPackImageUploader.tsx   # Tech illustration sketch uploader
-│   ├── TechPackResultCard.tsx      # Tech pack result display with regeneration
-│   ├── TechPackSpinner.tsx         # Loading spinner for tech pack generation
-│   └── TechPackImagePreviewModal.tsx
-├── pages/               # Page components
-│   ├── LandingPage.tsx            # Home page with navigation
-│   ├── MicroTrendStudio.tsx       # Main Micro-Trend Studio application
-│   ├── MoodboardPage.tsx          # Moodboard AI interface
-│   └── TechIllustrationPage.tsx   # Tech Illustration/Tech Pack generator
-├── services/            # API service layer
-│   └── geminiService.ts
-├── constants/           # Static data and configurations
-│   ├── pantoneColors.js  # Pantone color database
-│   └── studioConstants.ts # Fabric library definitions
-├── types/               # TypeScript type definitions
-│   └── index.ts
-├── public/              # Static assets
-│   └── swatches/        # Generated fabric swatch images
-├── server.js            # Express backend server
-├── App.tsx              # React Router configuration
-├── main.tsx             # React entry point
-├── index.html           # HTML template
-├── dist/                # Production build output
-└── .env                 # Environment variables (not committed)
+├── backend/              # Python FastAPI Service (AI Orchestration & Business Logic)
+│   ├── main.py           # Service routers config & legacy RPC compatibility layer
+│   ├── requirements.txt  # Python package dependencies
+│   ├── routers/          # FastAPI Domain Routers (REST Endpoints)
+│   │   ├── studio.py     # Design Studio & Try-on REST routes
+│   │   ├── moodboard.py  # Moodboard & Pantone REST routes
+│   │   └── tech_pack.py  # Sketch-to-Tech Pack REST routes
+│   ├── services/         # Core Business & Gemini AI service modules
+│   │   ├── base_service.py
+│   │   ├── studio_service.py
+│   │   ├── moodboard_service.py
+│   │   └── tech_pack_service.py
+│   ├── constants/        # Backend static configurations
+│   │   ├── fabrics.py
+│   │   └── pantone_colors.py
+│   └── tech_pack/        # Evaluation / optimization scripts
+├── frontend/             # React TypeScript Frontend (Vite, Tailwind)
+│   ├── App.tsx           # Router and core view controller
+│   ├── index.html        # Base HTML wrapper
+│   ├── components/       # UI and domain components (VTO, Moodboard, Sketch Uploader)
+│   ├── pages/            # Page-level views (Landing, MicroTrendStudio, Moodboard, TechIllustration)
+│   ├── services/         # Frontend API service layer
+│   │   └── geminiService.ts
+│   ├── constants/        # Frontend static assets and definitions
+│   │   ├── pantoneColors.js
+│   │   └── studioConstants.ts
+│   ├── public/           # Static graphic assets
+│   ├── package.json      # Node package settings
+│   └── vite.config.ts    # Vite proxy & bundler configurations
+├── start.sh              # Root orchestration script to run both environments
+└── server.js             # Production express server
 ```
 
 ## Usage

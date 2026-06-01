@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 import base64
 import urllib.parse
 from typing import Optional, List, Dict, Any
@@ -10,19 +13,19 @@ import google.auth
 import google.auth.transport.requests
 from google.cloud import storage
 
-# Import our services and constants
-from services.gemini_service import (
-    generate_initial_image, generate_initial_image_variations, edit_image,
-    generate_edit_variations, generate_video_variations, generate_prompt,
-    generate_color_palette, generate_moodboard_image, regenerate_color,
-    rewrite_prompt, select_best_image, analyze_tech_pack_sketch,
-    generate_tech_pack_flat, generate_tech_pack_rendering,
-    regenerate_tech_pack_rendering, regenerate_tech_pack_flat,
-    generate_annotated_tech_pack, get_region_for_model, VIDEO_MODEL
-)
+# Import base service constants/helpers
+from services.base_service import get_region_for_model, VIDEO_MODEL
+
+# Import domain services
+import services.studio_service as studio_service
+import services.moodboard_service as moodboard_service
+import services.tech_pack_service as tech_pack_service
+
+# Import routers
+from routers import studio, moodboard, tech_pack
 from constants.fabrics import FABRICS
 
-app = FastAPI()
+app = FastAPI(title="P2M Accelerator API")
 
 # Add CORS middleware
 app.add_middleware(
@@ -33,30 +36,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
+app.include_router(studio.router, prefix="/api/studio", tags=["Studio"])
+app.include_router(moodboard.router, prefix="/api/moodboard", tags=["Moodboard"])
+app.include_router(tech_pack.router, prefix="/api/tech_pack", tags=["TechPack"])
+
 # GCS Storage client
 storage_client = storage.Client()
 bucket_name = os.environ.get("GCS_BUCKET_NAME", "p2m-accelerator-ufp")
 video_folder = os.environ.get("VIDEO_FOLDER", "video_generation")
 
-# Map of available functions in gemini_service
+# Legacy backward-compatibility map for RPC-style frontend requests
 gemini_service_map = {
-    "generateInitialImage": generate_initial_image,
-    "generateInitialImageVariations": generate_initial_image_variations,
-    "editImage": edit_image,
-    "generateEditVariations": generate_edit_variations,
-    "generateVideoVariations": generate_video_variations,
-    "generatePrompt": generate_prompt,
-    "generateColorPalette": generate_color_palette,
-    "generateMoodboardImage": generate_moodboard_image,
-    "regenerateColor": regenerate_color,
-    "rewritePrompt": rewrite_prompt,
-    "selectBestImage": select_best_image,
-    "analyzeTechPackSketch": analyze_tech_pack_sketch,
-    "generateTechPackFlat": generate_tech_pack_flat,
-    "generateTechPackRendering": generate_tech_pack_rendering,
-    "regenerateTechPackRendering": regenerate_tech_pack_rendering,
-    "regenerateTechPackFlat": regenerate_tech_pack_flat,
-    "generateAnnotatedTechPack": generate_annotated_tech_pack,
+    # Studio / Try-on / VTO
+    "generatePrompt": studio_service.generate_prompt,
+    "generateInitialImage": studio_service.generate_initial_image,
+    "generateInitialImageVariations": studio_service.generate_initial_image_variations,
+    "editImage": studio_service.edit_image,
+    "generateEditVariations": studio_service.generate_edit_variations,
+    "generateVideoVariations": studio_service.generate_video_variations,
+    "selectBestImage": studio_service.select_best_image,
+    
+    # Moodboard
+    "generateColorPalette": moodboard_service.generate_color_palette,
+    "generateMoodboardImage": moodboard_service.generate_moodboard_image,
+    "regenerateColor": moodboard_service.regenerate_color,
+    "rewritePrompt": moodboard_service.rewrite_prompt,
+    
+    # Tech Pack
+    "analyzeTechPackSketch": tech_pack_service.analyze_tech_pack_sketch,
+    "generateTechPackFlat": tech_pack_service.generate_tech_pack_flat,
+    "generateTechPackRendering": tech_pack_service.generate_tech_pack_rendering,
+    "regenerateTechPackRendering": tech_pack_service.regenerate_tech_pack_rendering,
+    "regenerateTechPackFlat": tech_pack_service.regenerate_tech_pack_flat,
+    "generateAnnotatedTechPack": tech_pack_service.generate_annotated_tech_pack,
 }
 
 @app.get("/api/fabrics")
@@ -65,6 +78,10 @@ async def get_fabrics():
 
 @app.post("/api/gemini")
 async def rpc_endpoint(request: Request):
+    """
+    Legacy RPC endpoint to ensure perfect backward compatibility with the 
+    existing frontend calling convention without requiring frontend refactoring.
+    """
     try:
         body = await request.json()
         func_name = body.get("func")
@@ -78,7 +95,7 @@ async def rpc_endpoint(request: Request):
 
         func = gemini_service_map[func_name]
         
-        # Execute the function
+        # Execute the refactored modular function
         result = await func(*args)
         return result
 
@@ -201,16 +218,15 @@ async def list_videos():
         videos = []
         for blob in blobs:
              if blob.name.endswith(".mp4"):
-                  # Extract folder and filename from blob name: video_folder/folder/filename.mp4
                   parts = blob.name.replace(f"{video_folder}/", "").split("/")
                   if len(parts) >= 2:
                        folder = parts[0]
                        filename = parts[1]
                        videos.append({
-                            "name": blob.name,
-                            "size": blob.size,
-                            "created": blob.time_created.isoformat() if blob.time_created else None,
-                            "url": f"/api/videos/stream/{folder}/{filename}"
+                             "name": blob.name,
+                             "size": blob.size,
+                             "created": blob.time_created.isoformat() if blob.time_created else None,
+                             "url": f"/api/videos/stream/{folder}/{filename}"
                        })
         return videos
 
