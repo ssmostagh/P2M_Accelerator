@@ -1,6 +1,16 @@
 import os
-from dotenv import load_dotenv
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    for env_path in [".env", "../.env"]:
+        if os.path.exists(env_path):
+            with open(env_path, "r") as f:
+                for line in f:
+                    if "=" in line and not line.strip().startswith("#"):
+                        key, value = line.strip().split("=", 1)
+                        if key not in os.environ:
+                            os.environ[key] = value
 
 import base64
 import urllib.parse
@@ -11,7 +21,13 @@ from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import google.auth
 import google.auth.transport.requests
-from google.cloud import storage
+
+try:
+    from google.cloud import storage
+    storage_client = storage.Client()
+except ImportError:
+    storage = None
+    storage_client = None
 
 # Import base service constants/helpers
 from services.base_service import get_region_for_model, VIDEO_MODEL
@@ -41,8 +57,6 @@ app.include_router(studio.router, prefix="/api/studio", tags=["Studio"])
 app.include_router(moodboard.router, prefix="/api/moodboard", tags=["Moodboard"])
 app.include_router(tech_pack.router, prefix="/api/tech_pack", tags=["TechPack"])
 
-# GCS Storage client
-storage_client = storage.Client()
 bucket_name = os.environ.get("GCS_BUCKET_NAME", "p2m-accelerator-ufp")
 video_folder = os.environ.get("VIDEO_FOLDER", "video_generation")
 
@@ -70,6 +84,7 @@ gemini_service_map = {
     "regenerateTechPackRendering": tech_pack_service.regenerate_tech_pack_rendering,
     "regenerateTechPackFlat": tech_pack_service.regenerate_tech_pack_flat,
     "generateAnnotatedTechPack": tech_pack_service.generate_annotated_tech_pack,
+    "applyTechPackPattern": tech_pack_service.apply_tech_pack_pattern,
 }
 
 @app.get("/api/fabrics")
@@ -162,12 +177,20 @@ async def get_operation_status(name: str):
                                 folder = op_id
                                 filename = f"video_{i}.mp4"
                                 
-                                bucket = storage_client.bucket(bucket_name)
-                                blob = bucket.blob(f"{video_folder}/{folder}/{filename}")
-                                blob.upload_from_string(video_bytes, content_type="video/mp4")
+                                if storage_client:
+                                    bucket = storage_client.bucket(bucket_name)
+                                    blob = bucket.blob(f"{video_folder}/{folder}/{filename}")
+                                    blob.upload_from_string(video_bytes, content_type="video/mp4")
+                                    print(f"Uploaded base64 video to GCS: {video_folder}/{folder}/{filename}", flush=True)
+                                else:
+                                    local_dir = os.path.join(os.path.dirname(__file__), video_folder, folder)
+                                    os.makedirs(local_dir, exist_ok=True)
+                                    local_path = os.path.join(local_dir, filename)
+                                    with open(local_path, "wb") as vf:
+                                        vf.write(video_bytes)
+                                    print(f"Uploaded base64 video to local disk: {local_path}", flush=True)
                                 
                                 gcs_urls.append(f"/api/videos/stream/{folder}/{filename}")
-                                print(f"Uploaded base64 video to GCS: {video_folder}/{folder}/{filename}", flush=True)
                             except Exception as e:
                                 print(f"Failed to decode or upload base64 video: {e}", flush=True)
                      
@@ -182,26 +205,45 @@ async def get_operation_status(name: str):
 @app.get("/api/videos/stream/{folder}/{filename}")
 async def stream_video(folder: str, filename: str):
     try:
-        bucket = storage_client.bucket(bucket_name)
-        blob = bucket.blob(f"{video_folder}/{folder}/{filename}")
+        if storage_client:
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(f"{video_folder}/{folder}/{filename}")
 
-        if not blob.exists():
-            raise HTTPException(status_code=404, detail="Video not found")
+            if not blob.exists():
+                raise HTTPException(status_code=404, detail="Video not found")
 
-        def iter_file():
-             with blob.open("rb") as f:
-                  while True:
-                       chunk = f.read(1024 * 1024)
-                       if not chunk:
+            def iter_file():
+                 with blob.open("rb") as f:
+                      while True:
+                           chunk = f.read(1024 * 1024)
+                           if not chunk:
+                                break
+                           yield chunk
+
+            blob.reload()
+            return StreamingResponse(
+                 iter_file(),
+                 media_type=blob.content_type or "video/mp4",
+                 headers={"Accept-Ranges": "bytes", "Content-Length": str(blob.size)}
+            )
+        else:
+            local_path = os.path.join(os.path.dirname(__file__), video_folder, folder, filename)
+            if not os.path.exists(local_path):
+                raise HTTPException(status_code=404, detail="Video not found")
+            
+            file_size = os.path.getsize(local_path)
+            def iter_local_file():
+                with open(local_path, "rb") as f:
+                    while True:
+                        chunk = f.read(1024 * 1024)
+                        if not chunk:
                             break
-                       yield chunk
-
-        blob.reload()
-        return StreamingResponse(
-             iter_file(),
-             media_type=blob.content_type or "video/mp4",
-             headers={"Accept-Ranges": "bytes", "Content-Length": str(blob.size)}
-        )
+                        yield chunk
+            return StreamingResponse(
+                iter_local_file(),
+                media_type="video/mp4",
+                headers={"Accept-Ranges": "bytes", "Content-Length": str(file_size)}
+            )
 
     except HTTPException as he:
         raise he
@@ -212,24 +254,43 @@ async def stream_video(folder: str, filename: str):
 @app.get("/api/videos/list")
 async def list_videos():
     try:
-        bucket = storage_client.bucket(bucket_name)
-        blobs = bucket.list_blobs(prefix=f"{video_folder}/")
+        if storage_client:
+            bucket = storage_client.bucket(bucket_name)
+            blobs = bucket.list_blobs(prefix=f"{video_folder}/")
 
-        videos = []
-        for blob in blobs:
-             if blob.name.endswith(".mp4"):
-                  parts = blob.name.replace(f"{video_folder}/", "").split("/")
-                  if len(parts) >= 2:
-                       folder = parts[0]
-                       filename = parts[1]
-                       videos.append({
-                             "name": blob.name,
-                             "size": blob.size,
-                             "created": blob.time_created.isoformat() if blob.time_created else None,
-                             "url": f"/api/videos/stream/{folder}/{filename}"
-                       })
-        return videos
+            videos = []
+            for blob in blobs:
+                 if blob.name.endswith(".mp4"):
+                      parts = blob.name.replace(f"{video_folder}/", "").split("/")
+                      if len(parts) >= 2:
+                           folder = parts[0]
+                           filename = parts[1]
+                           videos.append({
+                                 "name": blob.name,
+                                 "size": blob.size,
+                                 "created": blob.time_created.isoformat() if blob.time_created else None,
+                                 "url": f"/api/videos/stream/{folder}/{filename}"
+                           })
+            return videos
+        else:
+            videos = []
+            base_local_dir = os.path.join(os.path.dirname(__file__), video_folder)
+            if os.path.exists(base_local_dir):
+                for folder in os.listdir(base_local_dir):
+                    folder_path = os.path.join(base_local_dir, folder)
+                    if os.path.isdir(folder_path):
+                        for filename in os.listdir(folder_path):
+                            if filename.endswith(".mp4"):
+                                filepath = os.path.join(folder_path, filename)
+                                videos.append({
+                                    "name": f"{video_folder}/{folder}/{filename}",
+                                    "size": os.path.getsize(filepath),
+                                    "created": None,
+                                    "url": f"/api/videos/stream/{folder}/{filename}"
+                                })
+            return videos
 
     except Exception as e:
          print(f"Error listing videos: {e}")
          raise HTTPException(status_code=500, detail="Failed to list videos")
+

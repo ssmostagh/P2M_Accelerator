@@ -11,7 +11,7 @@ This application optimizes prompts for generating annotated technical fashion sk
 
 2.  **Environment**:
     Ensure you have access to `gemini-3.1-flash-image-preview` and `gemini-2.0-flash-001`.
-    Set `GOOGLE_CLOUD_PROJECT` if needed (defaults to `wortz-project-352116` in code).
+    Set `GOOGLE_CLOUD_PROJECT` in your environment or `.env` file.
 
 ## Usage
 

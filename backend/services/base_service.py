@@ -31,10 +31,9 @@ def get_client(model_name: str) -> genai.Client:
     region = get_region_for_model(model_name)
     if region not in client_cache:
         project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
-        is_vertex = region != 'global'
         client_cache[region] = genai.Client(
-            vertexai=is_vertex,
-            project=project_id if is_vertex else None,
+            vertexai=True,
+            project=project_id,
             location=region
         )
     return client_cache[region]

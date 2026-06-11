@@ -31,7 +31,7 @@ export default function LandingPage() {
         </div>
 
         {/* Tools Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Quick Response Design Studio */}
           <Link
             to="/designstudio"
@@ -125,6 +125,39 @@ export default function LandingPage() {
             </div>
             <div className="mt-4 text-teal-400 font-semibold group-hover:translate-x-2 transition-transform inline-flex items-center text-sm">
               Generate Assets
+              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
+
+          {/* Textile Pattern Studio */}
+          <Link
+            to="/patternapplier"
+            className="bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700 hover:border-indigo-500 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/20 group"
+          >
+            <div className="mb-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Textile Pattern Studio
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-3 text-sm">
+                Seamlessly apply fabric pattern swatches (checks, plaids, florals) to your technical flat illustrations.
+              </p>
+              <ul className="text-xs text-gray-500 space-y-1">
+                <li>• Upload technical flat line art</li>
+                <li>• Upload any fabric swatch image</li>
+                <li>• AI-mapped texture wrapping</li>
+                <li>• Preserve exact stitching and seams</li>
+                <li>• Instant high-quality visual downloads</li>
+              </ul>
+            </div>
+            <div className="mt-4 text-indigo-400 font-semibold group-hover:translate-x-2 transition-transform inline-flex items-center text-sm">
+              Launch Studio
               <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>

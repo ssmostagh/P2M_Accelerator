@@ -110,3 +110,19 @@ async def regenerate_flat(request: RegenerateFlatRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class ApplyPatternRequest(BaseModel):
+    flat_image: Any
+    swatch_image: Any
+
+@router.post("/apply-pattern")
+async def apply_pattern(request: ApplyPatternRequest):
+    """Apply a fabric pattern swatch to a technical flat illustration."""
+    try:
+        return await tech_pack_service.apply_tech_pack_pattern(
+            request.flat_image,
+            request.swatch_image
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

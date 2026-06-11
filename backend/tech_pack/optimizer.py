@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from google import genai
 from google.genai import types
 
 class Optimizer:
     def __init__(self, model_name="gemini-3.1-pro-preview"):
-        self.client = genai.Client(vertexai=True, project="wortz-project-352116", location="global")
+        self.client = genai.Client(vertexai=True, project=os.environ.get("GOOGLE_CLOUD_PROJECT"), location="global")
         self.model_name = model_name
         self.history = []
         self.best_score = -1.0

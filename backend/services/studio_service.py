@@ -1,3 +1,4 @@
+import os
 import asyncio
 from typing import List, Dict, Any, Optional
 from google.genai import types
@@ -88,8 +89,10 @@ async def generate_initial_image(model_image_data: str, garment_image_data: str,
 
 def _generate_single_image_sync(model_image_data: str, garment_image_data: str, prompt_text: str, temperature: Optional[float] = None) -> str:
     """Synchronous helper for ProcessPoolExecutor to generate a single image."""
+    project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
     fresh_client = genai.Client(
-        vertexai=False,
+        vertexai=True,
+        project=project_id,
         location='global'
     )
     
@@ -139,8 +142,10 @@ async def edit_image(base_image_data: str, prompt: str) -> str:
 
 def _generate_single_edit_sync(base_image_data: str, prompt: str) -> str:
     """Synchronous helper for ProcessPoolExecutor to generate a single edit."""
+    project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
     fresh_client = genai.Client(
-        vertexai=False,
+        vertexai=True,
+        project=project_id,
         location='global'
     )
     image_part = data_url_to_part(base_image_data)

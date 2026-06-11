@@ -20,6 +20,7 @@ import LandingPage from './pages/LandingPage';
 import MicroTrendStudio from './pages/MicroTrendStudio';
 import MoodboardPage from './pages/MoodboardPage';
 import TechIllustrationPage from './pages/TechIllustrationPage';
+import PatternApplierPage from './pages/PatternApplierPage';
 import { ThemeProvider } from './context/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 
@@ -85,6 +86,17 @@ const App: React.FC = () => {
                     >
                       Technical Illustrations
                     </NavLink>
+                    <NavLink
+                      to="/patternapplier"
+                      className={({ isActive }) =>
+                        `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+                          ? 'bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-white'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+                        }`
+                      }
+                    >
+                      Pattern Studio
+                    </NavLink>
                   </div>
                   <div className="pl-4 border-l border-gray-200 dark:border-gray-700">
                     <ThemeToggle />
@@ -101,6 +113,7 @@ const App: React.FC = () => {
               <Route path="/designstudio" element={<MicroTrendStudio />} />
               <Route path="/moodboard" element={<MoodboardPage />} />
               <Route path="/techpack" element={<TechIllustrationPage />} />
+              <Route path="/patternapplier" element={<PatternApplierPage />} />
             </Routes>
           </div>
 

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import json
 from google import genai
 from google.genai import types
@@ -29,7 +30,7 @@ class EvaluationResult(BaseModel):
 
 class Evaluator:
     def __init__(self, model_name="gemini-3.1-pro-preview"):
-        self.client = genai.Client(vertexai=True, project="wortz-project-352116", location="global")
+        self.client = genai.Client(vertexai=True, project=os.environ.get("GOOGLE_CLOUD_PROJECT"), location="global")
         self.model_name = model_name
 
     def evaluate(self, ref_image_path: str, emp_image_path: str, generated_image: Image.Image) -> EvaluationResult:
