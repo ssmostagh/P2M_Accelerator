@@ -13,13 +13,23 @@
  */
 
 import { useState, useCallback } from 'react';
-import { SparklesIcon, DownloadIcon, ResetIcon, ZoomIcon } from '../components/TechPackIcons';
+import { SparklesIcon, DownloadIcon, ResetIcon, ZoomIcon, HistoryIcon } from '../components/TechPackIcons';
 import { TechPackImagePreviewModal } from '../components/TechPackImagePreviewModal';
 import { TechPackSpinner } from '../components/TechPackSpinner';
+import { HistorySelectionModal } from '../components/HistorySelectionModal';
+import { TechPackResultCard } from '../components/TechPackResultCard';
 
 interface ImageState {
   file: File;
   dataUrl: string;
+}
+
+interface PatternHistoryItem {
+  id: string;
+  techFlat: ImageState;
+  swatch: ImageState;
+  patternedResultUrl: string;
+  timestamp: number;
 }
 
 export default function PatternApplierPage() {
@@ -27,8 +37,14 @@ export default function PatternApplierPage() {
   const [swatch, setSwatch] = useState<ImageState | null>(null);
   const [patternedResult, setPatternedResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [previewingImage, setPreviewingImage] = useState<string | null>(null);
+
+  // History State
+  const [history, setHistory] = useState<PatternHistoryItem[]>([]);
+  const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number>(0);
+  const [historyModalOpen, setHistoryModalOpen] = useState<boolean>(false);
 
   const fileToDataUrl = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -45,8 +61,9 @@ export default function PatternApplierPage() {
     });
   };
 
-  const handleGenerate = useCallback(async () => {
-    if (!techFlat || !swatch) return;
+  const handleGenerate = useCallback(async (overrideSwatch?: ImageState) => {
+    const currentSwatch = overrideSwatch || swatch;
+    if (!techFlat || !currentSwatch) return;
 
     setIsLoading(true);
     setError(null);
@@ -55,7 +72,7 @@ export default function PatternApplierPage() {
     try {
       const [flatBase64, swatchBase64] = await Promise.all([
         fileToDataUrl(techFlat.file),
-        fileToDataUrl(swatch.file)
+        fileToDataUrl(currentSwatch.file)
       ]);
 
       const response = await fetch('/api/gemini', {
@@ -72,13 +89,79 @@ export default function PatternApplierPage() {
       }
 
       const result = await response.json();
-      setPatternedResult(result.patternedImage);
+      const resultUrl = result.patternedImage;
+      setPatternedResult(resultUrl);
+
+      const newItem: PatternHistoryItem = {
+        id: Date.now().toString(),
+        techFlat: techFlat,
+        swatch: currentSwatch,
+        patternedResultUrl: resultUrl,
+        timestamp: Date.now(),
+      };
+
+      setHistory(prev => {
+        const nextHistory = [...prev, newItem];
+        setSelectedHistoryIndex(nextHistory.length - 1);
+        return nextHistory;
+      });
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
       console.error(e);
       setError(`Pattern application failed: ${errorMessage}. Please check the console for details.`);
     } finally {
       setIsLoading(false);
+    }
+  }, [techFlat, swatch]);
+
+  const handleRegeneratePattern = useCallback(async (feedback?: string) => {
+    if (!techFlat || !swatch) return;
+
+    setIsRegenerating(true);
+    setError(null);
+
+    try {
+      const [flatBase64, swatchBase64] = await Promise.all([
+        fileToDataUrl(techFlat.file),
+        fileToDataUrl(swatch.file)
+      ]);
+
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          func: 'applyTechPackPattern',
+          args: [flatBase64, swatchBase64, feedback]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to regenerate pattern application');
+      }
+
+      const result = await response.json();
+      const resultUrl = result.patternedImage;
+      setPatternedResult(resultUrl);
+
+      const newItem: PatternHistoryItem = {
+        id: Date.now().toString(),
+        techFlat: techFlat,
+        swatch: swatch,
+        patternedResultUrl: resultUrl,
+        timestamp: Date.now(),
+      };
+
+      setHistory(prev => {
+        const nextHistory = [...prev, newItem];
+        setSelectedHistoryIndex(nextHistory.length - 1);
+        return nextHistory;
+      });
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+      console.error(e);
+      setError(`Pattern regeneration failed: ${errorMessage}. Please check the console for details.`);
+    } finally {
+      setIsRegenerating(false);
     }
   }, [techFlat, swatch]);
 
@@ -90,6 +173,9 @@ export default function PatternApplierPage() {
     setPatternedResult(null);
     setError(null);
     setIsLoading(false);
+    setIsRegenerating(false);
+    setHistory([]);
+    setSelectedHistoryIndex(0);
   };
 
   return (
@@ -100,7 +186,7 @@ export default function PatternApplierPage() {
             Textile Pattern Studio
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Instantly apply fabric patterns and swatches (checks, plaids, florals) to your technical flat illustrations.
+            Instantly apply fabric patterns and swatches to your technical flat illustrations.
           </p>
         </div>
 
@@ -215,7 +301,7 @@ export default function PatternApplierPage() {
 
             {techFlat && swatch && (
               <button
-                onClick={handleGenerate}
+                onClick={() => handleGenerate()}
                 className="w-full max-w-xs bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500 transition-all duration-300 shadow-xl flex items-center justify-center gap-2 text-lg"
               >
                 <SparklesIcon className="w-6 h-6" />
@@ -235,7 +321,7 @@ export default function PatternApplierPage() {
 
         {/* Results Screen */}
         {!isLoading && patternedResult && techFlat && swatch && (
-          <div className="w-full max-w-5xl flex flex-col items-center gap-8">
+          <div className="w-full max-w-6xl flex flex-col items-center gap-8">
             <div className="w-full flex justify-between items-center mb-2">
               <h2 className="text-2xl font-bold text-white">Your Patterned Technical Flat</h2>
               <button
@@ -257,48 +343,65 @@ export default function PatternApplierPage() {
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl">
-                  <h3 className="text-sm font-semibold mb-2 text-gray-900 dark:text-white">Uploaded Swatch</h3>
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Uploaded Swatch</h3>
+                    <label htmlFor="swap-swatch-input" className="text-xs bg-purple-600 hover:bg-purple-500 text-white font-bold py-1 px-2.5 rounded cursor-pointer shadow transition-colors">
+                      Swap Swatch
+                      <input
+                        id="swap-swatch-input"
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp"
+                        onChange={async (e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            const newSwatchFile = e.target.files[0];
+                            const newSwatchDataUrl = URL.createObjectURL(newSwatchFile);
+                            const newSwatchState = { file: newSwatchFile, dataUrl: newSwatchDataUrl };
+                            setSwatch(newSwatchState);
+                            handleGenerate(newSwatchState);
+                          }
+                          e.target.value = '';
+                        }}
+                        className="sr-only"
+                      />
+                    </label>
+                  </div>
                   <div className="aspect-box aspect-w-1 aspect-h-1 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg flex items-center justify-center cursor-pointer hover:opacity-90" onClick={() => setPreviewingImage(swatch.dataUrl)}>
                     <img src={swatch.dataUrl} alt="Pattern Swatch" className="object-cover max-h-48 w-full rounded" />
                   </div>
                 </div>
               </div>
 
-              {/* Main Result Column */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-2xl shadow-black/20 flex flex-col border border-gray-200 dark:border-gray-700 lg:col-span-2">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-purple-900/20">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <SparklesIcon className="w-5 h-5 text-purple-400" />
-                    Applied Pattern Illustration
-                  </h3>
-                </div>
-                <div className="relative group flex-grow flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[400px]">
-                  <img src={patternedResult} alt="Applied pattern result" className="object-contain max-h-[500px] w-full rounded-md" />
-                  <div
-                    className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-                    onClick={() => setPreviewingImage(patternedResult)}
-                  >
-                    <div className="text-white flex items-center gap-2 font-semibold">
-                      <ZoomIcon />
-                      <span>View Larger</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4 mt-auto bg-gray-100/50 dark:bg-gray-800/50">
-                  <a
-                    href={patternedResult}
-                    download="patterned-tech-flat.png"
-                    className="w-full bg-indigo-600 text-white text-center font-bold py-3 px-4 rounded-lg hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-indigo-500 transition-all duration-300 flex items-center justify-center gap-2"
-                  >
-                    <DownloadIcon />
-                    Download Patterned Illustration
-                  </a>
-                </div>
+              {/* Main Result Column with TechPackResultCard */}
+              <div className="lg:col-span-2">
+                <TechPackResultCard
+                  title="Applied Pattern Illustration"
+                  imageUrl={patternedResult}
+                  altText="Applied pattern result"
+                  fileName="patterned-tech-flat.png"
+                  onPreview={setPreviewingImage}
+                  onRegenerate={handleRegeneratePattern}
+                  isRegenerating={isRegenerating}
+                  onShowHistory={history.length > 0 ? () => setHistoryModalOpen(true) : undefined}
+                />
               </div>
             </div>
           </div>
         )}
+
+        <HistorySelectionModal
+          isOpen={historyModalOpen}
+          onClose={() => setHistoryModalOpen(false)}
+          title="Pattern Application History"
+          images={history.map(h => h.patternedResultUrl)}
+          selectedIndex={selectedHistoryIndex}
+          onSelect={(index) => {
+            setSelectedHistoryIndex(index);
+            setPatternedResult(history[index].patternedResultUrl);
+            setTechFlat(history[index].techFlat);
+            setSwatch(history[index].swatch);
+          }}
+        />
       </main>
 
       {previewingImage && (

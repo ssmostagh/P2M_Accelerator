@@ -1,7 +1,7 @@
 import os
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"), override=True)
 except ImportError:
     for env_path in [".env", "../.env"]:
         if os.path.exists(env_path):
@@ -36,9 +36,10 @@ from services.base_service import get_region_for_model, VIDEO_MODEL
 import services.studio_service as studio_service
 import services.moodboard_service as moodboard_service
 import services.tech_pack_service as tech_pack_service
+import services.pattern_service as pattern_service
 
 # Import routers
-from routers import studio, moodboard, tech_pack
+from routers import studio, moodboard, tech_pack, pattern
 from constants.fabrics import FABRICS
 
 app = FastAPI(title="P2M Accelerator API")
@@ -56,6 +57,7 @@ app.add_middleware(
 app.include_router(studio.router, prefix="/api/studio", tags=["Studio"])
 app.include_router(moodboard.router, prefix="/api/moodboard", tags=["Moodboard"])
 app.include_router(tech_pack.router, prefix="/api/tech_pack", tags=["TechPack"])
+app.include_router(pattern.router, prefix="/api/pattern", tags=["Pattern"])
 
 bucket_name = os.environ.get("GCS_BUCKET_NAME", "p2m-accelerator-ufp")
 video_folder = os.environ.get("VIDEO_FOLDER", "video_generation")
@@ -84,7 +86,9 @@ gemini_service_map = {
     "regenerateTechPackRendering": tech_pack_service.regenerate_tech_pack_rendering,
     "regenerateTechPackFlat": tech_pack_service.regenerate_tech_pack_flat,
     "generateAnnotatedTechPack": tech_pack_service.generate_annotated_tech_pack,
-    "applyTechPackPattern": tech_pack_service.apply_tech_pack_pattern,
+    
+    # Pattern Studio
+    "applyTechPackPattern": pattern_service.apply_tech_pack_pattern,
 }
 
 @app.get("/api/fabrics")

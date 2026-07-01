@@ -31,11 +31,15 @@ class GenerateAnnotatedRequest(BaseModel):
 class RegenerateRenderingRequest(BaseModel):
     front_image: Any
     back_image: Optional[Any] = None
+    front_includes_back: bool = False
     feedback: Optional[str] = None
+    front_description: Optional[str] = None
+    back_description: Optional[str] = None
 
 class RegenerateFlatRequest(BaseModel):
     front_image: Any
     back_image: Optional[Any] = None
+    front_includes_back: bool = False
     feedback: Optional[str] = None
 
 @router.post("/analyze-sketch")
@@ -94,7 +98,10 @@ async def regenerate_rendering(request: RegenerateRenderingRequest):
         return await tech_pack_service.regenerate_tech_pack_rendering(
             request.front_image,
             request.back_image,
-            request.feedback
+            request.front_includes_back,
+            request.feedback,
+            request.front_description,
+            request.back_description
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -106,23 +113,8 @@ async def regenerate_flat(request: RegenerateFlatRequest):
         return await tech_pack_service.regenerate_tech_pack_flat(
             request.front_image,
             request.back_image,
+            request.front_includes_back,
             request.feedback
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-class ApplyPatternRequest(BaseModel):
-    flat_image: Any
-    swatch_image: Any
-
-@router.post("/apply-pattern")
-async def apply_pattern(request: ApplyPatternRequest):
-    """Apply a fabric pattern swatch to a technical flat illustration."""
-    try:
-        return await tech_pack_service.apply_tech_pack_pattern(
-            request.flat_image,
-            request.swatch_image
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-

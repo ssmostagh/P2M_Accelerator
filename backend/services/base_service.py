@@ -26,17 +26,40 @@ def get_region_for_model(model_name: str) -> str:
         return 'global'
     return os.environ.get('GOOGLE_CLOUD_LOCATION', 'us-central1')
 
+import subprocess
+from google.oauth2.credentials import Credentials
+
+def get_smart_credentials():
+    """Attempt to get credentials from active gcloud CLI auth or default ADC."""
+    try:
+        token = subprocess.check_output(['gcloud', 'auth', 'print-access-token'], stderr=subprocess.DEVNULL).decode('utf-8').strip()
+        if token:
+            return Credentials(token=token)
+    except Exception:
+        pass
+    return None
+
 def get_client(model_name: str) -> genai.Client:
     """Get or create a genai.Client for the model's region."""
     region = get_region_for_model(model_name)
-    if region not in client_cache:
-        project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
-        client_cache[region] = genai.Client(
-            vertexai=True,
-            project=project_id,
-            location=region
-        )
-    return client_cache[region]
+    project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
+    cache_key = (region, project_id)
+    if cache_key not in client_cache:
+        creds = get_smart_credentials()
+        if creds:
+            client_cache[cache_key] = genai.Client(
+                vertexai=True,
+                project=project_id,
+                location=region,
+                credentials=creds
+            )
+        else:
+            client_cache[cache_key] = genai.Client(
+                vertexai=True,
+                project=project_id,
+                location=region
+            )
+    return client_cache[cache_key]
 
 def data_url_to_part(data_url: Any) -> types.Part:
     """Convert a Data URL to a types.Part for the SDK."""

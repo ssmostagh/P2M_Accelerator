@@ -375,6 +375,11 @@ const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) 
     // Model-specific config
     const generationConfig = {
         responseModalities: [Modality.IMAGE, Modality.TEXT],
+        imageConfig: {
+            outputMimeType: 'image/png',
+            imageSize: '1K',
+            aspectRatio: '1:1'
+        }
     };
 
     // Add temperature for gemini-3.1-flash-image-preview to increase creativity/quality
@@ -414,6 +419,11 @@ const generateInitialImageVariations = async (modelImagePart, garmentImagePart, 
     // Model-specific config
     const generationConfig = {
         responseModalities: [Modality.IMAGE, Modality.TEXT],
+        imageConfig: {
+            outputMimeType: 'image/png',
+            imageSize: '1K',
+            aspectRatio: '1:1'
+        }
     };
 
     // Add temperature for gemini-3.1-flash-image-preview
@@ -447,6 +457,11 @@ const editImage = async (imagePart, textPart) => {
         contents: { role: 'user', parts: [imagePart, textPart] },
         config: {
             responseModalities: [Modality.IMAGE, Modality.TEXT],
+            imageConfig: {
+                outputMimeType: 'image/png',
+                imageSize: '1K',
+                aspectRatio: '1:1'
+            }
         },
     });
 
@@ -455,7 +470,14 @@ const editImage = async (imagePart, textPart) => {
 
 const generateEditVariations = async (baseImage, prompt, count = 3) => {
     const imagePart = dataUrlToGenerativePart(baseImage);
-    const textPart = { text: prompt };
+    const enhancedPrompt = `Perform the following edit on the provided image: "${prompt}"
+
+CRITICAL QUALITY & FIDELITY MANDATE:
+- Maintain absolute high-definition 1K photo quality and pristine crispness. Do NOT blur, compress, or soften image details.
+- Preserve the exact facial features, skin texture, lighting, highlights, shadows, and body proportions of the model perfectly.
+- Keep the studio background clean and unchanged.
+- Perform ONLY the requested garment edits while treating the rest of the image as a locked, uncompromised high-fidelity photograph.`;
+    const textPart = { text: enhancedPrompt };
     const editPromises = [];
     for (let i = 0; i < count; i++) {
         editPromises.push(editImage(imagePart, textPart));
@@ -838,7 +860,7 @@ const generateTechPackAssets = async (frontImageDataUrl, backImageDataUrl = null
         // Enhanced consistency instructions for matching front and back views
         const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
 
-        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it 9) EXCLUDE ALL STYLING ACCESSORIES: Do not include gloves, jewelry, bags, shoes, hats, scarves, separate belts, or any other accessories - show ONLY the garment being manufactured";
+        const commonFlatSuffix = "CRITICAL: This must be a clean technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be pure white inside except for structural seam lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and structural garment construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) CRITICAL MANDATE - ZERO FABRIC PATTERNS OR PRINTS: Do NOT transfer, trace, or draw any fabric patterns, prints, plaids, stripes, checks, florals, or surface textiles from the input sketch into the technical flat. The garment panels in the technical flat must be completely blank, clean, and unpatterned 6) Think of this as a structural technical blueprint/line drawing for manufacturers - like a clean line art coloring book page 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it 9) EXCLUDE ALL STYLING ACCESSORIES: Do not include gloves, jewelry, bags, shoes, hats, scarves, separate belts, or any other accessories - show ONLY the garment being manufactured";
 
 
         const commonConfig = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
@@ -959,7 +981,7 @@ const regenerateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null
         const frontImagePart = dataUrlToGenerativePart(frontImageDataUrl);
         const imagePartForPrompts = backImageDataUrl ? dataUrlToGenerativePart(backImageDataUrl) : frontImagePart;
 
-        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it 9) EXCLUDE ALL STYLING ACCESSORIES: Do not include gloves, jewelry, bags, shoes, hats, scarves, separate belts, or any other accessories - show ONLY the garment being manufactured";
+        const commonFlatSuffix = "CRITICAL: This must be a clean technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be pure white inside except for structural seam lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and structural garment construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) CRITICAL MANDATE - ZERO FABRIC PATTERNS OR PRINTS: Do NOT transfer, trace, or draw any fabric patterns, prints, plaids, stripes, checks, florals, or surface textiles from the input sketch into the technical flat. The garment panels in the technical flat must be completely blank, clean, and unpatterned 6) Think of this as a structural technical blueprint/line drawing for manufacturers - like a clean line art coloring book page 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it 9) EXCLUDE ALL STYLING ACCESSORIES: Do not include gloves, jewelry, bags, shoes, hats, scarves, separate belts, or any other accessories - show ONLY the garment being manufactured";
         const consistencyRequirements = "\n\nCRITICAL CONSISTENCY REQUIREMENTS: The front and back views MUST represent the SAME garment and maintain perfect consistency in: 1) Overall garment length (shoulder to hem must match) 2) Width and silhouette proportions 3) Sleeve length, style, and width 4) Waistline placement and shape 5) Hemline shape and level 6) Design details like pleats, gathers, or ruffles 7) Fabric weight and drape characteristics 8) Construction method and seam placement. The front and back views should look like they could be sewn together to create one cohesive garment.";
 
         const feedbackSection = feedback ? `\n\nIMPORTANT FEEDBACK/CHANGES REQUESTED: ${feedback}\n\nPlease incorporate this feedback while maintaining all other technical flat requirements and garment consistency.` : '';
@@ -998,7 +1020,7 @@ const generateTechPackFlat = async (frontImageDataUrl, backImageDataUrl = null, 
         const backImagePart = backImageDataUrl ? dataUrlToGenerativePart(backImageDataUrl) : null;
         const imagePartForBackPrompts = backImagePart ?? frontImagePart;
 
-        const commonFlatSuffix = "CRITICAL: This must be a technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be white inside except for detail lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and all construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) If you need to show pattern or texture details, use ONLY thin outline patterns, never solid fills 6) Think of this as a technical blueprint/line drawing for manufacturers - like a coloring book page that hasn't been colored in yet 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it 9) EXCLUDE ALL STYLING ACCESSORIES: Do not include gloves, jewelry, bags, shoes, hats, scarves, separate belts, or any other accessories - show ONLY the garment being manufactured";
+        const commonFlatSuffix = "CRITICAL: This must be a clean technical flat illustration suitable for factory production. ABSOLUTE REQUIREMENTS: 1) ONLY thin black lines/outlines on pure white background - NO GREY TONES WHATSOEVER 2) ZERO fills, ZERO colors, ZERO shading, ZERO textures, ZERO gradients - everything must be pure white inside except for structural seam lines 3) Show seam lines, stitching, topstitching, darts, pleats, pockets, and structural garment construction details ONLY as thin black outlines 4) The garment should be laid completely flat as if viewed from directly above on a table 5) CRITICAL MANDATE - ZERO FABRIC PATTERNS OR PRINTS: Do NOT transfer, trace, or draw any fabric patterns, prints, plaids, stripes, checks, florals, or surface textiles from the input sketch into the technical flat. The garment panels in the technical flat must be completely blank, clean, and unpatterned 6) Think of this as a structural technical blueprint/line drawing for manufacturers - like a clean line art coloring book page 7) NO SOLID BLACK AREAS - if a garment piece is dark in the sketch, show it with outline only 8) ABSOLUTELY NO HUMAN BODY, NO MANNEQUIN, NO MODEL - show ONLY the garment itself as if it were laying flat on a table with nothing inside it 9) EXCLUDE ALL STYLING ACCESSORIES: Do not include gloves, jewelry, bags, shoes, hats, scarves, separate belts, or any other accessories - show ONLY the garment being manufactured";
 
         const aiClient = getAIClientForModel(model);
         const generationConfig = {

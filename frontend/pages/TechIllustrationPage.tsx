@@ -8,9 +8,7 @@
  *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
+ * distributed under permissions and
  * limitations under the License.
  */
 
@@ -34,6 +32,8 @@ type WorkflowStep = 'upload' | 'analyzing' | 'selecting_flat' | 'generating_anno
 interface FlatHistory {
   id: string;
   variations: string[];
+  annotatedOverlay?: string;
+  annotations?: string;
   timestamp: number;
 }
 
@@ -62,12 +62,26 @@ export default function TechPackPage() {
   // Regeneration State
   const [isRegeneratingRendering, setIsRegeneratingRendering] = useState<boolean>(false);
   const [isRegeneratingFlat, setIsRegeneratingFlat] = useState<boolean>(false);
-  /* const [isRegeneratingAnnotations, setIsRegeneratingAnnotations] = useState<boolean>(false); */
 
   const [historyModalOpen, setHistoryModalOpen] = useState<boolean>(false);
   const [historyModalType, setHistoryModalType] = useState<'flat' | 'rendering'>('flat');
 
   const [garmentDescriptions, setGarmentDescriptions] = useState<{ front: string; back: string | null } | null>(null);
+
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to read file as data URL.'));
+        }
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleGenerate = useCallback(async (frontFile: File, backFile: File | null, includesBack: boolean) => {
     const frontDataUrl = URL.createObjectURL(frontFile);
@@ -101,7 +115,7 @@ export default function TechPackPage() {
       setGarmentDescriptions({ front: frontDescription, back: backDescription });
 
       // Step 2: Generate Flat and Rendering (SINGLE)
-      setLoadingStep('Generating technical flat and photorealistic rendering...');
+      setLoadingStep('Generating technical flat and 3D rendering...');
 
       const [flatResponse, renderingResponse] = await Promise.all([
         fetch('/api/gemini', {
@@ -134,9 +148,9 @@ export default function TechPackPage() {
       console.log('📦 Received flat data:', flatData);
       console.log('📦 Received rendering data:', renderingData);
 
-      // Step 3: Auto-generate Annotations AND SVG concurrently
+      // Step 3: Auto-generate Annotations
       setLoadingStep('Generating technical annotations...');
-      const [annotationResponse /* , svgResponse */] = await Promise.all([
+      const [annotationResponse] = await Promise.all([
         fetch('/api/gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -145,21 +159,13 @@ export default function TechPackPage() {
             args: [flatData.flatCombined, null, includesBack]
           })
         })
-        /* fetch('/api/gemini', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            func: 'generateTechPackFlatSvg',
-            args: [flatData.flatCombined]
-          })
-        }) */
       ]);
 
-      if (!annotationResponse.ok /* || !svgResponse.ok */) {
+      if (!annotationResponse.ok) {
         throw new Error('Failed to generate supporting tech pack assets');
       }
 
-      const [annotationData /* , svgData */] = await Promise.all([
+      const [annotationData] = await Promise.all([
         annotationResponse.json()
       ]);
 
@@ -170,21 +176,24 @@ export default function TechPackPage() {
       setFlatHistory([{
         id: historyId,
         variations: [flatData.flatCombined],
+        annotatedOverlay: annotationData.annotatedImage,
+        annotations: annotationData.annotations,
         timestamp: Date.now()
       }]);
+      setSelectedFlatIndex(0);
 
       setRenderingHistory([{
         id: historyId,
         variations: [renderingData.renderingCombined],
         timestamp: Date.now()
       }]);
+      setSelectedRenderingIndex(0);
 
       setGeneratedImages({
         flatCombined: flatData.flatCombined,
         renderingCombined: renderingData.renderingCombined,
         annotatedOverlay: annotationData.annotatedImage,
         annotations: annotationData.annotations,
-        /* flatCombinedSvg: svgData.flatCombinedSvg */
       });
 
       setWorkflowStep('complete');
@@ -200,21 +209,6 @@ export default function TechPackPage() {
       setLoadingStep('');
     }
   }, []);
-
-  const fileToDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          resolve(reader.result);
-        } else {
-          reject(new Error('Failed to read file as data URL.'));
-        }
-      };
-      reader.onerror = (error) => reject(error);
-      reader.readAsDataURL(file);
-    });
-  };
 
   const handleRegenerateRendering = useCallback(async (feedback?: string) => {
     if (!uploadedImages.front || !generatedImages) return;
@@ -240,7 +234,19 @@ export default function TechPackPage() {
       }
 
       const result = await response.json();
-      setGeneratedImages(prev => prev ? { ...prev, renderingCombined: result.renderingCombined } : null);
+      const newRendering = result.renderingCombined;
+
+      setGeneratedImages(prev => prev ? { ...prev, renderingCombined: newRendering } : null);
+
+      setRenderingHistory(prev => {
+        const nextHistory = [...prev, {
+          id: Date.now().toString(),
+          variations: [newRendering],
+          timestamp: Date.now()
+        }];
+        setSelectedRenderingIndex(nextHistory.length - 1);
+        return nextHistory;
+      });
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
       console.error(e);
@@ -248,20 +254,14 @@ export default function TechPackPage() {
     } finally {
       setIsRegeneratingRendering(false);
     }
-  }, [uploadedImages, generatedImages, frontIncludesBack]);
+  }, [uploadedImages, generatedImages, frontIncludesBack, garmentDescriptions]);
 
-  /* 
-   * Smart Regeneration:
-   * - If user is viewing Annotations (isOverlayActive=true), ONLY regenerate annotations logic.
-   * - If user is viewing Flat (isOverlayActive=false/undefined), regenerate Flat FIRST, then Annotations.
-   */
   const handleRegenerateFlat = useCallback(async (feedback?: string, isOverlayActive?: boolean) => {
     if (!uploadedImages.front || !generatedImages) return;
 
     // Case 1: Only regenerate Annotations (Overlay is Active)
     if (isOverlayActive) {
-      /* setIsRegeneratingAnnotations(true); */ // Re-using flat spinner for simplicity or add specific state
-      setIsRegeneratingFlat(true); // Using same spinner for now
+      setIsRegeneratingFlat(true);
       setError(null);
 
       try {
@@ -289,6 +289,17 @@ export default function TechPackPage() {
           annotations: annotationData.annotations
         } : null);
 
+        setFlatHistory(prev => {
+          const nextHistory = [...prev, {
+            id: Date.now().toString(),
+            variations: [currentFlat],
+            annotatedOverlay: annotationData.annotatedImage,
+            annotations: annotationData.annotations,
+            timestamp: Date.now()
+          }];
+          setSelectedFlatIndex(nextHistory.length - 1);
+          return nextHistory;
+        });
       } catch (e) {
         console.error(e);
         setError('Failed to regenerate annotations');
@@ -346,6 +357,18 @@ export default function TechPackPage() {
         annotatedOverlay: annotationData.annotatedImage,
         annotations: annotationData.annotations
       } : null);
+
+      setFlatHistory(prev => {
+        const nextHistory = [...prev, {
+          id: Date.now().toString(),
+          variations: [newFlat],
+          annotatedOverlay: annotationData.annotatedImage,
+          annotations: annotationData.annotations,
+          timestamp: Date.now()
+        }];
+        setSelectedFlatIndex(nextHistory.length - 1);
+        return nextHistory;
+      });
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
       console.error(e);
@@ -354,53 +377,6 @@ export default function TechPackPage() {
       setIsRegeneratingFlat(false);
     }
   }, [uploadedImages, generatedImages, frontIncludesBack]);
-
-  /*
-  const handleRegenerateAnnotations = useCallback(async () => {
-    if (!generatedImages?.flatCombined) return;
-
-    setIsRegeneratingAnnotations(true);
-    setError(null);
-
-    try {
-      const annotationResponse = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          func: 'generateAnnotatedTechPack',
-          args: [generatedImages.flatCombined, null, frontIncludesBack]
-        })
-      });
-
-      if (!annotationResponse.ok) {
-        throw new Error('Failed to regenerate annotations');
-      }
-
-      const annotationData = await annotationResponse.json();
-
-      // Update only the annotations, keep the flat the same
-      setGeneratedImages(prev => prev ? {
-        ...prev,
-        annotatedOverlay: annotationData.annotatedImage,
-        annotations: annotationData.annotations
-      } : null);
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      console.error(e);
-      setError(`Regeneration failed: ${errorMessage}`);
-    } finally {
-      setIsRegeneratingAnnotations(false);
-    }
-  }, [generatedImages, frontIncludesBack]);
-  */
-
-
-
-
-
-
-
-
 
   const handleReset = () => {
     if (uploadedImages.front) {
@@ -422,7 +398,6 @@ export default function TechPackPage() {
     setFrontIncludesBack(false);
     setIsRegeneratingRendering(false);
     setIsRegeneratingFlat(false);
-    /* setIsRegeneratingAnnotations(false); */
   };
 
   return (
@@ -454,10 +429,6 @@ export default function TechPackPage() {
           </div>
         )}
 
-
-
-
-
         {/* Final Results Screen */}
         {!isLoading && generatedImages && uploadedImages.front && workflowStep === 'complete' && (
           <div className="w-full max-w-7xl">
@@ -483,7 +454,7 @@ export default function TechPackPage() {
               )}
               {generatedImages.renderingCombined && (
                 <TechPackResultCard
-                  title="Photorealistic Rendering (Front + Back)"
+                  title="3D Rendering (Front + Back)"
                   imageUrl={generatedImages.renderingCombined}
                   altText="AI-generated professional rendering with front and back views"
                   fileName="rendering-combined.png"
@@ -500,7 +471,6 @@ export default function TechPackPage() {
                 title="Technical Flat (Front + Back)"
                 imageUrl={generatedImages.flatCombined}
                 overlayImage={generatedImages.annotatedOverlay}
-                // svgContent={generatedImages.flatCombinedSvg}
                 altText="AI-generated technical flat with front and back views"
                 fileName="technical-flat-combined.png"
                 onPreview={setPreviewingImage}
@@ -526,30 +496,30 @@ export default function TechPackPage() {
           }
           selectedIndex={historyModalType === 'flat' ? selectedFlatIndex : selectedRenderingIndex}
           onSelect={(index) => {
-            // We need to look up the image URL from the history
-            // Flatten the list similarly to how we pass it to 'images'
-            const flatList = historyModalType === 'flat'
-              ? flatHistory.flatMap(h => h.variations)
-              : renderingHistory.flatMap(h => h.variations);
-
-            const selectedUrl = flatList[index];
-
             if (historyModalType === 'flat') {
               setSelectedFlatIndex(index);
-              // We might need to assume 1 variation per history entry if flattened?
-              // Actually flatVariations is just string[]. historyModal uses flatHistory?
-              // Wait, flatVariations is the CURRENT history session's variations.
-              // flatHistory is persistent?
-              // Let's check definitions.
-              // flatVariations: string[]
-              setGeneratedImages(prev => prev ? { ...prev, flatCombined: selectedUrl } : null);
+              const selectedHistoryItem = flatHistory[index];
+              if (selectedHistoryItem) {
+                setGeneratedImages(prev => prev ? {
+                  ...prev,
+                  flatCombined: selectedHistoryItem.variations[0],
+                  annotatedOverlay: selectedHistoryItem.annotatedOverlay || prev.annotatedOverlay,
+                  annotations: selectedHistoryItem.annotations || prev.annotations
+                } : null);
+              }
             } else {
               setSelectedRenderingIndex(index);
-              setGeneratedImages(prev => prev ? { ...prev, renderingCombined: selectedUrl } : null);
+              const selectedHistoryItem = renderingHistory[index];
+              if (selectedHistoryItem) {
+                setGeneratedImages(prev => prev ? {
+                  ...prev,
+                  renderingCombined: selectedHistoryItem.variations[0]
+                } : null);
+              }
             }
           }}
         />
-      </main >
+      </main>
       {previewingImage && (
         <TechPackImagePreviewModal imageUrl={previewingImage} onClose={() => setPreviewingImage(null)} />
       )}

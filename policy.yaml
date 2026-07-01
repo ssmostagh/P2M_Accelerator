@@ -1,0 +1,8 @@
+name: projects/intproj-genmedia-industries/policies/iam.allowedPolicyMemberDomains
+spec:
+  inheritFromParent: true
+  rules:
+  - values:
+      allowedValues:
+      - is:C01foya18
+      - is:C02h8e9nw
