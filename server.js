@@ -55,11 +55,14 @@ console.log(`Using default location: ${location}`);
 // Model-to-region mapping
 // Models that require specific regions override the default
 const MODEL_REGIONS = {
+    'gemini-3-pro-image': 'global',
+    'gemini-3.0-pro': 'global',
+    'gemini-3.0-pro-preview': 'global',
+    'gemini-3.1-pro-preview': 'global',
     'gemini-3.1-flash-preview': 'global',
-    'gemini-3.1-flash-image-preview': 'global',
+    'gemini-3.1-flash-image': 'global',
+    'gemini-3.1-flash-lite-image': 'global',
     'veo-3.1-fast-generate-001': 'us-central1',
-    // Add other model-specific regions here as needed
-    // All other models will use the default location from environment variables
 };
 
 // Function to get the appropriate region for a model
@@ -176,8 +179,9 @@ const loadFabrics = async () => {
 };
 
 // Updated to Gemini 3 for image generation tasks
-const imageEditingModel = 'gemini-3.1-flash-image-preview';
-const textVisionModel = 'gemini-3.1-pro-preview'; // For garment description and analysis
+const initialTryOnModel = 'gemini-3.1-pro-image';
+const imageEditingModel = 'gemini-3.1-flash-image';
+const textVisionModel = 'gemini-3.5-flash'; // For garment description and analysis
 const videoModel = 'veo-3.1-fast-generate-001';
 
 const dataUrlToGenerativePart = (dataUrl) => {
@@ -230,7 +234,7 @@ const processApiResponse = (response) => {
 // Helper function to generate model-specific virtual try-on prompts
 const getVirtualTryOnPrompt = (garmentDescription, modelName) => {
     // Gemini 3 Pro - trying a more concise, direct approach
-    if (modelName === 'gemini-3.1-flash-image-preview' || modelName === 'gemini-3.1-flash-image-preview') {
+    if (modelName === 'gemini-3.1-flash-image' || 'flash-image' in modelName) {
         return `Generate a photorealistic image of the person from the first image wearing the garment from the second image.
 
 GARMENT DESCRIPTION:
@@ -382,13 +386,13 @@ const generateInitialImage = async (modelImagePart, garmentImagePart, textPart) 
         }
     };
 
-    // Add temperature for gemini-3.1-flash-image-preview to increase creativity/quality
-    if (imageEditingModel === 'gemini-3.1-flash-image-preview' || imageEditingModel === 'gemini-3.1-flash-image-preview') {
+    // Add temperature for gemini-3.1-flash-image to increase creativity/quality
+    if (imageEditingModel === 'gemini-3.1-flash-image' || 'flash-image' in imageEditingModel) {
         generationConfig.temperature = 1.0; // Higher temperature for more variation
     }
 
     const response = await aiClient.models.generateContent({
-        model: imageEditingModel,
+        model: initialTryOnModel,
         contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
         config: generationConfig,
     });
@@ -426,8 +430,8 @@ const generateInitialImageVariations = async (modelImagePart, garmentImagePart, 
         }
     };
 
-    // Add temperature for gemini-3.1-flash-image-preview
-    if (imageEditingModel === 'gemini-3.1-flash-image-preview' || imageEditingModel === 'gemini-3.1-flash-image-preview') {
+    // Add temperature for gemini-3.1-flash-image to increase creativity/quality
+    if (imageEditingModel === 'gemini-3.1-flash-image' || 'flash-image' in imageEditingModel) {
         generationConfig.temperature = 1.0; // Higher temperature for more variation
     }
 
@@ -435,7 +439,7 @@ const generateInitialImageVariations = async (modelImagePart, garmentImagePart, 
     for (let i = 0; i < count; i++) {
         console.log(`📤 Starting generation ${i + 1}/${count}...`);
         const promise = aiClient.models.generateContent({
-            model: imageEditingModel,
+            model: initialTryOnModel,
             contents: { role: 'user', parts: [modelImagePart, garmentImagePart, enhancedTextPart] },
             config: generationConfig,
         }).then(response => {
@@ -656,8 +660,7 @@ const generateColorPalette = async (title, keywords) => {
 };
 
 const generateMoodboardImage = async (prompt, aspectRatio) => {
-    // Using Gemini 2.5 Flash Image for moodboard generation (faster, good for creative iteration)
-    const model = 'gemini-3.1-flash-image-preview';
+    const model = 'gemini-3.1-flash-lite-image';
     const aiClient = getAIClientForModel(model);
 
     console.log(`🎨 Generating moodboard image with aspect ratio: ${aspectRatio}`);
@@ -1139,7 +1142,7 @@ const generateAnnotatedTechPack = async (flatImageDataUrl, backImageDataUrl = nu
         console.log('========================================');
 
         // Use Gemini 3 Pro for the complex instruction following required for annotations
-        const model = 'gemini-3.1-flash-image-preview';
+        const model = 'gemini-3.1-flash-image';
         console.log('Using model:', model);
 
         const flatImagePart = dataUrlToGenerativePart(flatImageDataUrl);

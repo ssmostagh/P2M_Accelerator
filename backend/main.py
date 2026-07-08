@@ -1,9 +1,11 @@
 import os
 try:
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"), override=True)
+    # Do NOT override existing environment variables (such as GOOGLE_CLOUD_PROJECT set in Cloud Run)
+    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"), override=False)
+    load_dotenv(os.path.join(os.path.dirname(__file__), "../.env"), override=False)
 except ImportError:
-    for env_path in [".env", "../.env"]:
+    for env_path in [os.path.join(os.path.dirname(__file__), ".env"), os.path.join(os.path.dirname(__file__), "../.env")]:
         if os.path.exists(env_path):
             with open(env_path, "r") as f:
                 for line in f:
@@ -297,4 +299,22 @@ async def list_videos():
     except Exception as e:
          print(f"Error listing videos: {e}")
          raise HTTPException(status_code=500, detail="Failed to list videos")
+
+# Serve frontend build static files if present (Single Unified Server)
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/dist"))
+if os.path.exists(os.path.join(frontend_dist, "index.html")):
+    if os.path.exists(os.path.join(frontend_dist, "assets")):
+        app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="API endpoint not found")
+        file_path = os.path.join(frontend_dist, full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
 

@@ -5,13 +5,17 @@ from google import genai
 from google.genai import types
 
 # Model Constants
-IMAGE_EDITING_MODEL = 'gemini-3.1-flash-image-preview'
-TEXT_VISION_MODEL = 'gemini-3.1-pro-preview'
+INITIAL_TRYON_MODEL = 'gemini-3-pro-image'
+IMAGE_EDITING_MODEL = 'gemini-3.1-flash-image'
+TEXT_VISION_MODEL = 'gemini-3.5-flash'
 VIDEO_MODEL = 'veo-3.1-fast-generate-001'
 
 MODEL_REGIONS = {
+    'gemini-3-pro-image': 'global',
+    'gemini-3.5-flash': 'global',
     'gemini-3.1-flash-preview': 'global',
-    'gemini-3.1-flash-image-preview': 'global',
+    'gemini-3.1-flash-image': 'global',
+    'gemini-3.1-flash-lite-image': 'global',
     'veo-3.1-fast-generate-001': 'us-central1',
 }
 
@@ -22,7 +26,7 @@ def get_region_for_model(model_name: str) -> str:
     """Determine the region for a given model."""
     if model_name in MODEL_REGIONS:
         return MODEL_REGIONS[model_name]
-    if '3.1' in model_name or 'preview' in model_name:
+    if '3.5' in model_name or '3.1' in model_name or '3.0' in model_name or 'preview' in model_name:
         return 'global'
     return os.environ.get('GOOGLE_CLOUD_LOCATION', 'us-central1')
 
@@ -39,10 +43,24 @@ def get_smart_credentials():
         pass
     return None
 
+def get_project_id() -> str:
+    """Get active GCP project dynamically from environment or gcloud config."""
+    project = os.environ.get('GOOGLE_CLOUD_PROJECT') or os.environ.get('GCP_PROJECT') or os.environ.get('GOOGLE_CLOUD_QUOTA_PROJECT')
+    if not project:
+        try:
+            project = subprocess.check_output(['gcloud', 'config', 'get-value', 'project'], stderr=subprocess.DEVNULL).decode('utf-8').strip()
+        except Exception:
+            pass
+    return project or 'fashion-design-1524'
+
 def get_client(model_name: str) -> genai.Client:
     """Get or create a genai.Client for the model's region."""
     region = get_region_for_model(model_name)
-    project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
+    project_id = get_project_id()
+    if project_id:
+        os.environ['GOOGLE_CLOUD_PROJECT'] = project_id
+        os.environ['GOOGLE_CLOUD_QUOTA_PROJECT'] = project_id
+
     cache_key = (region, project_id)
     if cache_key not in client_cache:
         creds = get_smart_credentials()

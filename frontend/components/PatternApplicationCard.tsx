@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { DownloadIcon, ZoomIcon, SparklesIcon, ResetIcon } from './TechPackIcons';
 
 interface PatternApplicationCardProps {

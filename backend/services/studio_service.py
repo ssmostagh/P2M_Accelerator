@@ -7,12 +7,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 from services.base_service import (
     get_client, data_url_to_part, process_api_response,
-    IMAGE_EDITING_MODEL, TEXT_VISION_MODEL, VIDEO_MODEL
+    INITIAL_TRYON_MODEL, IMAGE_EDITING_MODEL, TEXT_VISION_MODEL, VIDEO_MODEL
 )
 
 def get_virtual_try_on_prompt(garment_description: str, model_name: str) -> str:
     """Generate prompt for virtual try-on."""
-    if model_name == 'gemini-3.1-flash-image-preview':
+    if model_name == 'gemini-3.1-flash-image' or 'flash-image' in model_name:
         return f"""Generate a photorealistic image of the person from the first image wearing the garment from the second image.
 
 GARMENT DESCRIPTION:
@@ -72,16 +72,16 @@ async def generate_initial_image(model_image_data: str, garment_image_data: str,
     garment_image_part = data_url_to_part(garment_image_data)
     
     garment_description = await generate_prompt(garment_image_data)
-    prompt_text = get_virtual_try_on_prompt(garment_description, IMAGE_EDITING_MODEL)
+    prompt_text = get_virtual_try_on_prompt(garment_description, INITIAL_TRYON_MODEL)
     
-    client = get_client(IMAGE_EDITING_MODEL)
+    client = get_client(INITIAL_TRYON_MODEL)
     config = types.GenerateContentConfig(
         response_modalities=["IMAGE", "TEXT"],
-        temperature=1.0 if IMAGE_EDITING_MODEL == 'gemini-3.1-flash-image-preview' else None
+        temperature=1.0 if '3.1' in INITIAL_TRYON_MODEL else None
     )
     
     response = await client.aio.models.generate_content(
-        model=IMAGE_EDITING_MODEL,
+        model=INITIAL_TRYON_MODEL,
         contents=[model_image_part, garment_image_part, types.Part.from_text(text=prompt_text)],
         config=config
     )
@@ -105,7 +105,7 @@ def _generate_single_image_sync(model_image_data: str, garment_image_data: str, 
     )
     
     response = fresh_client.models.generate_content(
-        model='gemini-3.1-flash-image-preview',
+        model=INITIAL_TRYON_MODEL,
         contents=[model_part, garment_part, types.Part.from_text(text=prompt_text)],
         config=config
     )
@@ -114,9 +114,9 @@ def _generate_single_image_sync(model_image_data: str, garment_image_data: str, 
 async def generate_initial_image_variations(model_image_data: str, garment_image_data: str, text_prompt: str, count: int = 4) -> List[str]:
     """Generate multiple initial image variations in parallel using ThreadPoolExecutor."""
     garment_description = await generate_prompt(garment_image_data)
-    prompt_text = get_virtual_try_on_prompt(garment_description, IMAGE_EDITING_MODEL)
+    prompt_text = get_virtual_try_on_prompt(garment_description, INITIAL_TRYON_MODEL)
     
-    temperature = 1.0 if IMAGE_EDITING_MODEL == 'gemini-3.1-flash-image-preview' else None
+    temperature = 1.0 if '3.1' in INITIAL_TRYON_MODEL else None
 
     with ThreadPoolExecutor(max_workers=count) as executor:
         loop = asyncio.get_running_loop()
@@ -150,7 +150,7 @@ def _generate_single_edit_sync(base_image_data: str, prompt: str) -> str:
     )
     image_part = data_url_to_part(base_image_data)
     response = fresh_client.models.generate_content(
-        model='gemini-3.1-flash-image-preview',
+        model='gemini-3.1-flash-image',
         contents=[image_part, prompt],
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE", "TEXT"]

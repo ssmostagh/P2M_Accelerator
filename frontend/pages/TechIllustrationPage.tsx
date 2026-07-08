@@ -504,7 +504,7 @@ export default function TechPackPage() {
                   ...prev,
                   flatCombined: selectedHistoryItem.variations[0],
                   annotatedOverlay: selectedHistoryItem.annotatedOverlay || prev.annotatedOverlay,
-                  annotations: selectedHistoryItem.annotations || prev.annotations
+                  annotations: Array.isArray(selectedHistoryItem.annotations) ? selectedHistoryItem.annotations : (typeof selectedHistoryItem.annotations === 'string' ? [selectedHistoryItem.annotations] : prev.annotations)
                 } : null);
               }
             } else {

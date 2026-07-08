@@ -23,7 +23,7 @@ async def generate_color_palette(title: str, keywords: str) -> Dict[str, List[Di
 
 async def generate_moodboard_image(prompt: str, aspect_ratio: str) -> str:
     """Generate moodboard image."""
-    model = 'gemini-3.1-flash-image-preview'
+    model = 'gemini-3.1-flash-lite-image'
     client = get_client(model)
     
     valid_ratios = ['1:1', '3:4', '4:3', '9:16', '16:9']

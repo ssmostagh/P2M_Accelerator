@@ -28,7 +28,7 @@ class DataSynthesizer:
     Synthesizes alternative versions of technical flat illustrations from existing testcases
     using Gemini image generation to test model resilience and expand benchmark datasets.
     """
-    def __init__(self, model_name="gemini-3.1-flash-image-preview", project=None):
+    def __init__(self, model_name="gemini-3.1-flash-image", project=None):
         if not project:
             project = os.environ.get("GOOGLE_CLOUD_PROJECT")
         # Strictly enforce global region for preview models

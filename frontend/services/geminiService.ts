@@ -42,8 +42,9 @@ export const generatePrompt = async (garmentImage: File): Promise<string> => {
   });
 
   if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to generate prompt.');
+      const error = await response.json().catch(() => ({}));
+      const msg = error.details || error.error || error.detail || 'Failed to generate prompt.';
+      throw new Error(msg);
   }
 
   const result = await response.json();
@@ -95,8 +96,9 @@ export const generateInitialImage = async (modelImage: File, garmentImage: File,
   });
 
   if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to generate initial image.');
+      const error = await response.json().catch(() => ({}));
+      const msg = error.details || error.error || error.detail || 'Failed to generate initial image.';
+      throw new Error(msg);
   }
 
   const result = await response.json();
@@ -117,8 +119,9 @@ export const generateInitialImageVariations = async (modelImage: File, garmentIm
   });
 
   if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to generate initial image variations.');
+      const error = await response.json().catch(() => ({}));
+      const msg = error.details || error.error || error.detail || 'Failed to generate initial image variations.';
+      throw new Error(msg);
   }
 
   const result = await response.json();
@@ -138,8 +141,9 @@ export const editImage = async (baseImage: string, prompt: string): Promise<stri
   });
 
   if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to edit image.');
+      const error = await response.json().catch(() => ({}));
+      const msg = error.details || error.error || error.detail || 'Failed to edit image.';
+      throw new Error(msg);
   }
 
   const result = await response.json();

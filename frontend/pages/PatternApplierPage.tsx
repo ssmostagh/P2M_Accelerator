@@ -13,7 +13,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { SparklesIcon, DownloadIcon, ResetIcon, ZoomIcon, HistoryIcon } from '../components/TechPackIcons';
+import { SparklesIcon, ResetIcon, ZoomIcon } from '../components/TechPackIcons';
 import { TechPackImagePreviewModal } from '../components/TechPackImagePreviewModal';
 import { TechPackSpinner } from '../components/TechPackSpinner';
 import { HistorySelectionModal } from '../components/HistorySelectionModal';

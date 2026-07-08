@@ -19,7 +19,7 @@ from PIL import Image
 import io
 
 class Generator:
-    def __init__(self, model_name="gemini-3.1-flash-image-preview"):
+    def __init__(self, model_name="gemini-3.1-flash-image"):
         self.client = genai.Client(vertexai=True, location="global")
         self.model_name = model_name
 
